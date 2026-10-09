@@ -1,0 +1,12 @@
+import { api } from './api';
+
+export const authService = {
+  login: (email: string, password: string) =>
+    api.post('/auth/login', { email, password }).then((r) => r.data.data),
+
+  logout: () => api.post('/auth/logout'),
+
+  refresh: () => api.post('/auth/refresh').then((r) => r.data.data),
+
+  me: () => api.get('/auth/me').then((r) => r.data.data),
+};

@@ -1,0 +1,461 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Hotel ───────────────────────────────────────────────────────────────────
+
+model Hotel {
+  id          String   @id @default(uuid())
+  name        String
+  address     String
+  city        String
+  country     String
+  phone       String
+  email       String
+  timezone    String   @default("UTC")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  roomTypes    RoomType[]
+  rooms        Room[]
+  ratePlans    RatePlan[]
+  reservations Reservation[]
+  users        User[]
+  nightAudits  NightAuditLog[]
+
+  @@map("hotels")
+}
+
+// ─── Room Type ───────────────────────────────────────────────────────────────
+
+model RoomType {
+  id           String   @id @default(uuid())
+  hotelId      String   @map("hotel_id")
+  name         String
+  description  String   @default("")
+  baseRate     Decimal  @map("base_rate") @db.Decimal(10, 2)
+  maxOccupancy Int      @map("max_occupancy")
+  amenities    Json     @default("[]")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  hotel        Hotel         @relation(fields: [hotelId], references: [id])
+  rooms        Room[]
+  ratePlans    RatePlan[]
+  reservations Reservation[]
+
+  @@index([hotelId])
+  @@map("room_types")
+}
+
+// ─── Room ────────────────────────────────────────────────────────────────────
+
+model Room {
+  id         String     @id @default(uuid())
+  hotelId    String     @map("hotel_id")
+  roomTypeId String     @map("room_type_id")
+  roomNumber String     @map("room_number")
+  floor      Int
+  status     RoomStatus @default(AVAILABLE)
+  isSmoking  Boolean    @default(false) @map("is_smoking")
+  notes      String?
+  createdAt  DateTime   @default(now()) @map("created_at")
+
+  hotel             Hotel              @relation(fields: [hotelId], references: [id])
+  roomType          RoomType           @relation(fields: [roomTypeId], references: [id])
+  reservations      Reservation[]
+  housekeepingTasks HousekeepingTask[]
+
+  @@index([hotelId])
+  @@index([status])
+  @@index([roomTypeId])
+  @@map("rooms")
+}
+
+enum RoomStatus {
+  AVAILABLE
+  OCCUPIED
+  DIRTY
+  CLEAN
+  MAINTENANCE
+  OUT_OF_ORDER
+}
+
+// ─── Rate Plan ───────────────────────────────────────────────────────────────
+
+model RatePlan {
+  id           String   @id @default(uuid())
+  hotelId      String   @map("hotel_id")
+  roomTypeId   String   @map("room_type_id")
+  name         String
+  rate         Decimal  @db.Decimal(10, 2)
+  startDate    DateTime @map("start_date") @db.Date
+  endDate      DateTime @map("end_date") @db.Date
+  minStay      Int      @default(1) @map("min_stay")
+  isActive     Boolean  @default(true) @map("is_active")
+
+  hotel        Hotel         @relation(fields: [hotelId], references: [id])
+  roomType     RoomType      @relation(fields: [roomTypeId], references: [id])
+  reservations Reservation[]
+
+  @@index([roomTypeId])
+  @@index([startDate, endDate])
+  @@map("rate_plans")
+}
+
+// ─── Guest ───────────────────────────────────────────────────────────────────
+
+model Guest {
+  id          String    @id @default(uuid())
+  firstName   String    @map("first_name")
+  lastName    String    @map("last_name")
+  email       String    @unique
+  phone       String
+  nationality String?
+  idType      GuestIdType? @map("id_type")
+  idNumber    String?   @map("id_number")
+  dateOfBirth DateTime? @map("date_of_birth") @db.Date
+  address     String?
+  vipLevel    VipLevel  @default(STANDARD) @map("vip_level")
+  notes       String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  reservationGuests ReservationGuest[]
+
+  @@index([email])
+  @@index([phone])
+  @@map("guests")
+}
+
+enum GuestIdType {
+  PASSPORT
+  NATIONAL_ID
+  DRIVING_LICENSE
+}
+
+enum VipLevel {
+  STANDARD
+  SILVER
+  GOLD
+  PLATINUM
+}
+
+// ─── Reservation ─────────────────────────────────────────────────────────────
+
+model Reservation {
+  id                   String            @id @default(uuid())
+  confirmationNumber   String            @unique @map("confirmation_number")
+  hotelId              String            @map("hotel_id")
+  roomTypeId           String            @map("room_type_id")
+  roomId               String?           @map("room_id")
+  ratePlanId           String?           @map("rate_plan_id")
+  checkInDate          DateTime          @map("check_in_date") @db.Date
+  checkOutDate         DateTime          @map("check_out_date") @db.Date
+  actualCheckIn        DateTime?         @map("actual_check_in")
+  actualCheckOut       DateTime?         @map("actual_check_out")
+  adults               Int               @default(1)
+  children             Int               @default(0)
+  status               ReservationStatus @default(PENDING)
+  source               ReservationSource @default(WALK_IN)
+  specialRequests      String?           @map("special_requests")
+  totalAmount          Decimal           @map("total_amount") @db.Decimal(10, 2)
+  createdBy            String            @map("created_by")
+  createdAt            DateTime          @default(now()) @map("created_at")
+
+  hotel             Hotel              @relation(fields: [hotelId], references: [id])
+  roomType          RoomType           @relation(fields: [roomTypeId], references: [id])
+  room              Room?              @relation(fields: [roomId], references: [id])
+  ratePlan          RatePlan?          @relation(fields: [ratePlanId], references: [id])
+  createdByUser     User               @relation(fields: [createdBy], references: [id])
+  reservationGuests ReservationGuest[]
+  folios            Folio[]
+  auditLogs         AuditLog[]
+
+  @@index([hotelId])
+  @@index([roomId])
+  @@index([status])
+  @@index([checkInDate, checkOutDate])
+  @@map("reservations")
+}
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  CHECKED_IN
+  CHECKED_OUT
+  CANCELLED
+  NO_SHOW
+}
+
+enum ReservationSource {
+  WALK_IN
+  PHONE
+  WEBSITE
+  OTA_BOOKING
+  AGENT
+}
+
+// ─── Reservation Guests (M2M) ─────────────────────────────────────────────────
+
+model ReservationGuest {
+  id            String  @id @default(uuid())
+  reservationId String  @map("reservation_id")
+  guestId       String  @map("guest_id")
+  isPrimary     Boolean @default(false) @map("is_primary")
+
+  reservation Reservation @relation(fields: [reservationId], references: [id])
+  guest       Guest       @relation(fields: [guestId], references: [id])
+
+  @@unique([reservationId, guestId])
+  @@map("reservation_guests")
+}
+
+// ─── Folio ───────────────────────────────────────────────────────────────────
+
+model Folio {
+  id            String      @id @default(uuid())
+  reservationId String      @map("reservation_id")
+  folioNumber   String      @unique @map("folio_number")
+  status        FolioStatus @default(OPEN)
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  reservation Reservation   @relation(fields: [reservationId], references: [id])
+  charges     FolioCharge[]
+  payments    Payment[]
+
+  @@index([reservationId])
+  @@map("folios")
+}
+
+enum FolioStatus {
+  OPEN
+  CLOSED
+}
+
+// ─── Folio Charge ────────────────────────────────────────────────────────────
+
+model FolioCharge {
+  id          String     @id @default(uuid())
+  folioId     String     @map("folio_id")
+  chargeType  ChargeType @map("charge_type")
+  description String
+  amount      Decimal    @db.Decimal(10, 2)
+  quantity    Int        @default(1)
+  unitPrice   Decimal    @map("unit_price") @db.Decimal(10, 2)
+  postedBy    String     @map("posted_by")
+  postedAt    DateTime   @default(now()) @map("posted_at")
+
+  folio      Folio @relation(fields: [folioId], references: [id])
+  postedUser User  @relation(fields: [postedBy], references: [id])
+
+  @@index([folioId])
+  @@index([chargeType])
+  @@map("folio_charges")
+}
+
+enum ChargeType {
+  ROOM_RATE
+  FNB
+  MINIBAR
+  LAUNDRY
+  TAX
+  SERVICE_CHARGE
+  MISC
+}
+
+// ─── Payment ─────────────────────────────────────────────────────────────────
+
+model Payment {
+  id              String        @id @default(uuid())
+  folioId         String        @map("folio_id")
+  reservationId   String        @map("reservation_id")
+  amount          Decimal       @db.Decimal(10, 2)
+  method          PaymentMethod
+  referenceNumber String?       @map("reference_number")
+  status          PaymentStatus @default(PENDING)
+  processedBy     String        @map("processed_by")
+  processedAt     DateTime      @default(now()) @map("processed_at")
+
+  folio         Folio @relation(fields: [folioId], references: [id])
+  processedUser User  @relation(fields: [processedBy], references: [id])
+
+  @@index([folioId])
+  @@map("payments")
+}
+
+enum PaymentMethod {
+  CASH
+  CREDIT_CARD
+  DEBIT_CARD
+  BANK_TRANSFER
+  MPESA
+  VOUCHER
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+// ─── Housekeeping Task ───────────────────────────────────────────────────────
+
+model HousekeepingTask {
+  id            String                  @id @default(uuid())
+  roomId        String                  @map("room_id")
+  assignedTo    String                  @map("assigned_to")
+  taskType      HousekeepingTaskType    @map("task_type")
+  status        HousekeepingTaskStatus  @default(PENDING)
+  priority      TaskPriority            @default(NORMAL)
+  notes         String?
+  scheduledDate DateTime                @map("scheduled_date") @db.Date
+  startedAt     DateTime?               @map("started_at")
+  completedAt   DateTime?               @map("completed_at")
+  createdAt     DateTime                @default(now()) @map("created_at")
+
+  room         Room @relation(fields: [roomId], references: [id])
+  assignedUser User @relation(fields: [assignedTo], references: [id])
+
+  @@index([roomId])
+  @@index([assignedTo])
+  @@index([status])
+  @@index([scheduledDate])
+  @@map("housekeeping_tasks")
+}
+
+enum HousekeepingTaskType {
+  CHECKOUT_CLEAN
+  STAYOVER_CLEAN
+  TURNDOWN
+  INSPECTION
+  MAINTENANCE
+}
+
+enum HousekeepingTaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  VERIFIED
+}
+
+enum TaskPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+// ─── Users ───────────────────────────────────────────────────────────────────
+
+model User {
+  id          String   @id @default(uuid())
+  hotelId     String   @map("hotel_id")
+  firstName   String   @map("first_name")
+  lastName    String   @map("last_name")
+  email       String   @unique
+  passwordHash String  @map("password_hash")
+  roleId      String   @map("role_id")
+  isActive    Boolean  @default(true) @map("is_active")
+  lastLogin   DateTime? @map("last_login")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  hotel             Hotel              @relation(fields: [hotelId], references: [id])
+  role              Role               @relation(fields: [roleId], references: [id])
+  reservations      Reservation[]
+  folioCharges      FolioCharge[]
+  payments          Payment[]
+  housekeepingTasks HousekeepingTask[]
+  auditLogs         AuditLog[]
+  nightAudits       NightAuditLog[]
+
+  @@index([hotelId])
+  @@map("users")
+}
+
+// ─── Role ────────────────────────────────────────────────────────────────────
+
+model Role {
+  id          String @id @default(uuid())
+  name        String @unique
+  description String @default("")
+
+  users           User[]
+  rolePermissions RolePermission[]
+
+  @@map("roles")
+}
+
+// ─── Permission ──────────────────────────────────────────────────────────────
+
+model Permission {
+  id       String @id @default(uuid())
+  resource String
+  action   String
+
+  rolePermissions RolePermission[]
+
+  @@unique([resource, action])
+  @@map("permissions")
+}
+
+// ─── Role Permission (M2M) ───────────────────────────────────────────────────
+
+model RolePermission {
+  roleId       String @map("role_id")
+  permissionId String @map("permission_id")
+
+  role       Role       @relation(fields: [roleId], references: [id])
+  permission Permission @relation(fields: [permissionId], references: [id])
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+// ─── Audit Log ───────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  action        String
+  entityType    String   @map("entity_type")
+  entityId      String   @map("entity_id")
+  changes       Json?
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  user        User         @relation(fields: [userId], references: [id])
+  reservation Reservation? @relation(fields: [entityId], references: [id], map: "audit_reservation_fk")
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ─── Night Audit Log ─────────────────────────────────────────────────────────
+
+model NightAuditLog {
+  id                  String           @id @default(uuid())
+  hotelId             String           @map("hotel_id")
+  auditDate           DateTime         @map("audit_date") @db.Date
+  status              NightAuditStatus @default(PENDING)
+  totalRoomsOccupied  Int              @default(0) @map("total_rooms_occupied")
+  totalRevenue        Decimal          @default(0) @map("total_revenue") @db.Decimal(12, 2)
+  runBy               String           @map("run_by")
+  completedAt         DateTime?        @map("completed_at")
+
+  hotel Hotel @relation(fields: [hotelId], references: [id])
+  runByUser User @relation(fields: [runBy], references: [id])
+
+  @@unique([hotelId, auditDate])
+  @@map("night_audit_logs")
+}
+
+enum NightAuditStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+}
