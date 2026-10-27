@@ -1,0 +1,10 @@
+{
+  "identifier": "manager-capability",
+  "description": "Manager override permissions and auditing",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default"
+  ]
+}

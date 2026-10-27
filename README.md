@@ -1,95 +1,70 @@
-# Hotel Management System (HMS)
+# Ethiopian Hotel Management System (EHMS)
 
-A modern, full-stack Property Management System (PMS) built with Node.js, React, and PostgreSQL.
+Enterprise-grade Hospitality Management System tailored for Ethiopian & International hotel operations.
+Architected as an enterprise monorepo with **Next.js frontend**, **Tauri 2 cross-platform desktop/mobile shell**, **NestJS backend**, **PostgreSQL database**, and **local SQLite offline outbox engine**.
 
-## Tech Stack
+---
 
-| Layer | Technology |
-|---|---|
-| Backend | Node.js + Express + TypeScript |
-| Database | PostgreSQL + Prisma ORM |
-| Cache | Redis |
-| Frontend | React + Vite + TypeScript |
-| State | Zustand + TanStack Query |
-| Real-time | Socket.IO |
-| Auth | JWT (Access + Refresh Tokens) |
-| Containerization | Docker + Docker Compose |
+## 🏛 Architecture Overview
 
-## Monorepo Structure
-
+```text
+                    HOTEL MANAGEMENT SYSTEM
+                              │
+              ┌───────────────┴───────────────┐
+              │                               │
+       SHARED FRONTEND                    BACKEND
+       Next.js + React                  NestJS API
+              │                               │
+     ┌────────┼────────┐              ┌───────┼────────┐
+     │        │        │              │       │        │
+    Web    Desktop   Mobile       PostgreSQL Redis   Workers
+             │        │
+             └── Tauri 2 ──┐
+                            │
+                       Native APIs
+                            │
+              ┌─────────────┼─────────────┐
+              │             │             │
+           SQLite        Camera/QR    Notifications
+              │
+          Offline Outbox
+              │
+              └──── Sync ─────→ NestJS
 ```
-HMS/
-├── apps/
-│   ├── api/          # Backend REST API
-│   └── web/          # Frontend React App
-├── packages/
-│   ├── shared-types/ # Shared TypeScript types/interfaces
-│   └── shared-utils/ # Shared utility functions
-├── docs/             # Documentation
-└── docker-compose.yml
-```
 
-## Core Modules
+---
 
-- Reservation & Booking Management
-- Front Desk (Check-in / Check-out)
-- Room Management
-- Housekeeping
-- Guest Management
-- Billing & Payments
-- Night Audit
-- Reports & Dashboard
-- User & Role Management (RBAC)
+## 📁 Repository Layout
 
-## Getting Started
+- `apps/web`: Shared Next.js App Router frontend organized by hotel domains
+- `apps/api`: NestJS modular backend with transactional hotel core & integrations
+- `apps/tauri`: Tauri 2 desktop & mobile shell with native device & SQLite offline cache
+- `packages/ui`: Shared reusable design system & UI components
+- `packages/types`: Shared TypeScript interfaces across full-stack & mobile
+- `packages/validation`: Zod schemas for shared frontend/backend/offline validation
+- `packages/api-client`: Fully-typed API SDK
+- `packages/localization`: Amharic, English, Afaan Oromoo + Ethiopian Ge'ez Calendar & ETB currency
+- `packages/config`: Canonical permissions, room statuses, lifecycle constants
+- `database/`: Migrations, seed data, and maintenance scripts
+- `infrastructure/`: Dockerfiles, Nginx, monitoring, and automated backup
+- `docs/`: Enterprise architecture, API specs, security protocols, workflows, and user guides
+- `tests/e2e/`: End-to-end hotel lifecycle suites
 
-### Prerequisites
-- Node.js >= 18
-- Docker & Docker Compose
+---
 
-### 1. Clone and install
+## 🚀 Quick Start
+
 ```bash
-git clone <repo-url>
-cd HMS
-npm install
+# Install dependencies across all apps & packages
+pnpm install
+
+# Start infrastructure (PostgreSQL, Redis, MinIO)
+pnpm docker:up
+
+# Run database migrations and seed default hotel data
+pnpm db:migrate
+pnpm db:seed
+
+# Start development servers (Next.js + NestJS concurrently)
+pnpm dev
 ```
-
-### 2. Configure environment
-```bash
-cp .env.example .env
-# Edit .env with your values
-```
-
-### 3. Start infrastructure
-```bash
-docker-compose up postgres redis -d
-```
-
-### 4. Run database migrations
-```bash
-cd apps/api
-npx prisma migrate dev
-npx prisma db seed
-```
-
-### 5. Start development servers
-```bash
-# Terminal 1 — API
-npm run dev:api
-
-# Terminal 2 — Web
-npm run dev:web
-```
-
-API runs on: http://localhost:5000  
-Web runs on: http://localhost:5173
-
-## User Roles
-
-| Role | Description |
-|---|---|
-| admin | Full system access |
-| manager | Hotel operations + reports |
-| receptionist | Reservations, check-in/out, billing |
-| housekeeping | Room tasks and status updates |
-| accountant | Billing, payments, financial reports |

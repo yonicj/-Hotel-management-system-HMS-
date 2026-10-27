@@ -1,0 +1,15 @@
+{
+  "appTitle": "Ethiopian Hotel Management System",
+  "dashboard": "Dashboard",
+  "reservations": "Reservations",
+  "frontDesk": "Front Desk",
+  "guests": "Guests",
+  "rooms": "Rooms",
+  "folios": "Folios",
+  "payments": "Payments",
+  "housekeeping": "Housekeeping",
+  "pos": "Point of Sale",
+  "inventory": "Inventory",
+  "reports": "Reports",
+  "settings": "Settings"
+}

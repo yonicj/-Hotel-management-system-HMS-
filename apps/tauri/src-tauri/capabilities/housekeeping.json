@@ -1,0 +1,10 @@
+{
+  "identifier": "housekeeping-capability",
+  "description": "Room status updates and offline checklist verification",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default"
+  ]
+}

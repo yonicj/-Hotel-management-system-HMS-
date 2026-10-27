@@ -1,0 +1,15 @@
+{
+  "appTitle": "የኢትዮጵያ ሆቴል አስተዳደር ሥርዓት",
+  "dashboard": "ዋና ገጽ",
+  "reservations": "የክፍል ማስያዣዎች",
+  "frontDesk": "እንግዳ መቀበያ",
+  "guests": "እንግዶች",
+  "rooms": "ክፍሎች",
+  "folios": "የሂሳብ መዝገብ",
+  "payments": "ክፍያዎች",
+  "housekeeping": "ጽዳትና ክብካቤ",
+  "pos": "ሽያጭ መመዝገቢያ",
+  "inventory": "ዕቃ ግምጃ ቤት",
+  "reports": "ሪፖርቶች",
+  "settings": "ቅንብሮች"
+}
