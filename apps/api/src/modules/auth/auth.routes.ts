@@ -3,12 +3,12 @@ import { loginController, refreshController, logoutController, meController } fr
 import { validate } from '../../shared/middleware/validate';
 import { authenticate } from '../../shared/middleware/authenticate';
 import { authRateLimiter } from '../../shared/middleware/rate-limiter';
-import { loginSchema, refreshSchema } from './auth.schema';
+import { loginSchema } from './auth.schema';
 
 const router = Router();
 
 router.post('/login', authRateLimiter, validate(loginSchema), loginController);
-router.post('/refresh', validate(refreshSchema, 'body'), refreshController);
+router.post('/refresh', refreshController);
 router.post('/logout', authenticate, logoutController);
 router.get('/me', authenticate, meController);
 

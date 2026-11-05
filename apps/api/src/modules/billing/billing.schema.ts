@@ -1,8 +1,7 @@
 import { z } from 'zod';
-import { ChargeType, PaymentMethod } from '@hms/shared-types';
 
 export const addChargeSchema = z.object({
-  chargeType: z.nativeEnum(ChargeType),
+  chargeType: z.enum(['ROOM_RATE', 'FNB', 'MINIBAR', 'LAUNDRY', 'TAX', 'SERVICE_CHARGE', 'MISC']),
   description: z.string().min(1),
   quantity: z.number().int().min(1),
   unitPrice: z.number().positive(),
@@ -10,7 +9,7 @@ export const addChargeSchema = z.object({
 
 export const addPaymentSchema = z.object({
   amount: z.number().positive(),
-  method: z.nativeEnum(PaymentMethod),
+  method: z.enum(['CASH', 'CREDIT_CARD', 'DEBIT_CARD', 'BANK_TRANSFER', 'MPESA', 'VOUCHER']),
   referenceNumber: z.string().optional(),
 });
 

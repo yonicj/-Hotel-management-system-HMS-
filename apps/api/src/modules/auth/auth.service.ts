@@ -19,7 +19,6 @@ export async function login(input: LoginInput) {
   const isMatch = await bcrypt.compare(input.password, user.passwordHash);
   if (!isMatch) throw new AppError('Invalid email or password', 401);
 
-  // Update last login
   await prisma.user.update({ where: { id: user.id }, data: { lastLogin: new Date() } });
 
   const payload = {
@@ -31,13 +30,12 @@ export async function login(input: LoginInput) {
 
   const accessToken = jwt.sign(payload, env.JWT_ACCESS_SECRET, {
     expiresIn: env.JWT_ACCESS_EXPIRES_IN,
-  });
+  } as any);
 
   const refreshToken = jwt.sign(payload, env.JWT_REFRESH_SECRET, {
     expiresIn: env.JWT_REFRESH_EXPIRES_IN,
-  });
+  } as any);
 
-  // Store refresh token in Redis (7 days TTL)
   await redis.set(`refresh:${user.id}`, refreshToken, 'EX', 7 * 24 * 60 * 60);
 
   return {
@@ -55,6 +53,7 @@ export async function login(input: LoginInput) {
 }
 
 export async function refreshTokens(token: string) {
+  if (!token) throw new AppError('Refresh token required', 401);
   try {
     const payload = jwt.verify(token, env.JWT_REFRESH_SECRET) as {
       userId: string;
@@ -69,11 +68,12 @@ export async function refreshTokens(token: string) {
     const newAccessToken = jwt.sign(
       { userId: payload.userId, email: payload.email, role: payload.role, hotelId: payload.hotelId },
       env.JWT_ACCESS_SECRET,
-      { expiresIn: env.JWT_ACCESS_EXPIRES_IN }
+      { expiresIn: env.JWT_ACCESS_EXPIRES_IN } as any
     );
 
     return { accessToken: newAccessToken };
-  } catch {
+  } catch (err: any) {
+    if (err instanceof AppError) throw err;
     throw new AppError('Invalid or expired refresh token', 401);
   }
 }

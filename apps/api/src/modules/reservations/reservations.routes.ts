@@ -3,7 +3,7 @@ import * as ctrl from './reservations.controller';
 import { authenticate } from '../../shared/middleware/authenticate';
 import { authorize } from '../../shared/middleware/authorize';
 import { validate } from '../../shared/middleware/validate';
-import { createReservationSchema, updateReservationSchema, assignRoomSchema } from './reservations.schema';
+import { createReservationSchema, assignRoomSchema } from './reservations.schema';
 
 const router = Router();
 router.use(authenticate);

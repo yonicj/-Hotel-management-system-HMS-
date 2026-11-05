@@ -13,7 +13,9 @@ export async function getRoomTypeById(id: string) {
 }
 
 export async function createRoomType(hotelId: string, input: CreateRoomTypeInput) {
-  return prisma.roomType.create({ data: { ...input, hotelId, amenities: input.amenities ?? [] } });
+  return prisma.roomType.create({
+    data: { ...input, hotelId, amenities: input.amenities ?? [] },
+  });
 }
 
 export async function updateRoomType(id: string, input: UpdateRoomTypeInput) {

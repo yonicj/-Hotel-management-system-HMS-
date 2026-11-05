@@ -5,7 +5,6 @@ import { sendSuccess } from '../../shared/utils/response';
 export async function loginController(req: Request, res: Response, next: NextFunction) {
   try {
     const result = await authService.login(req.body);
-    // Store refresh token in httpOnly cookie
     res.cookie('refreshToken', result.refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',

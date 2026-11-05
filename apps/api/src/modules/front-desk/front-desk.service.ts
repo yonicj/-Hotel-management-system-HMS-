@@ -6,7 +6,10 @@ import { emitRoomStatusUpdated } from '../../shared/events/room-status.events';
 export async function checkIn(reservationId: string, userId: string) {
   const reservation = await prisma.reservation.findUnique({
     where: { id: reservationId },
-    include: { room: true, reservationGuests: { include: { guest: true }, where: { isPrimary: true } } },
+    include: {
+      room: true,
+      reservationGuests: { include: { guest: true }, where: { isPrimary: true } },
+    },
   });
 
   if (!reservation) throw new AppError('Reservation not found', 404);
@@ -35,7 +38,7 @@ export async function checkIn(reservationId: string, userId: string) {
   emitRoomStatusUpdated(reservation.hotelId, {
     roomId: reservation.roomId,
     roomNumber: reservation.room!.roomNumber,
-    status: 'occupied' as any,
+    status: 'OCCUPIED',
     updatedBy: userId,
     updatedAt: new Date().toISOString(),
   });
@@ -55,8 +58,15 @@ export async function checkOut(reservationId: string, userId: string) {
   const openFolio = reservation.folios.find((f) => f.status === 'OPEN');
   if (openFolio) {
     const totalCharges = openFolio.charges.reduce((sum, c) => sum + Number(c.amount), 0);
-    const totalPayments = openFolio.payments.filter((p) => p.status === 'COMPLETED').reduce((sum, p) => sum + Number(p.amount), 0);
-    if (totalPayments < totalCharges) throw new AppError(`Outstanding balance: ${totalCharges - totalPayments}. Please settle the folio before check-out.`, 400);
+    const totalPayments = openFolio.payments
+      .filter((p) => p.status === 'COMPLETED')
+      .reduce((sum, p) => sum + Number(p.amount), 0);
+    if (totalPayments < totalCharges) {
+      throw new AppError(
+        `Outstanding balance: ${(totalCharges - totalPayments).toFixed(2)}. Please settle the folio before check-out.`,
+        400
+      );
+    }
   }
 
   const updated = await prisma.$transaction(async (tx) => {
@@ -65,7 +75,9 @@ export async function checkOut(reservationId: string, userId: string) {
       data: { status: 'CHECKED_OUT', actualCheckOut: new Date() },
     });
     await tx.room.update({ where: { id: reservation.roomId! }, data: { status: 'DIRTY' } });
-    if (openFolio) await tx.folio.update({ where: { id: openFolio.id }, data: { status: 'CLOSED' } });
+    if (openFolio) {
+      await tx.folio.update({ where: { id: openFolio.id }, data: { status: 'CLOSED' } });
+    }
     return res;
   });
 
@@ -78,7 +90,7 @@ export async function checkOut(reservationId: string, userId: string) {
   emitRoomStatusUpdated(reservation.hotelId, {
     roomId: reservation.roomId!,
     roomNumber: reservation.room!.roomNumber,
-    status: 'dirty' as any,
+    status: 'DIRTY',
     updatedBy: userId,
     updatedAt: new Date().toISOString(),
   });
@@ -89,7 +101,11 @@ export async function checkOut(reservationId: string, userId: string) {
 export async function getArrivals(hotelId: string, date: string) {
   return prisma.reservation.findMany({
     where: { hotelId, checkInDate: new Date(date), status: { in: ['CONFIRMED', 'PENDING'] } },
-    include: { room: true, roomType: true, reservationGuests: { include: { guest: true }, where: { isPrimary: true } } },
+    include: {
+      room: true,
+      roomType: true,
+      reservationGuests: { include: { guest: true }, where: { isPrimary: true } },
+    },
     orderBy: { checkInDate: 'asc' },
   });
 }
@@ -97,7 +113,11 @@ export async function getArrivals(hotelId: string, date: string) {
 export async function getDepartures(hotelId: string, date: string) {
   return prisma.reservation.findMany({
     where: { hotelId, checkOutDate: new Date(date), status: 'CHECKED_IN' },
-    include: { room: true, roomType: true, reservationGuests: { include: { guest: true }, where: { isPrimary: true } } },
+    include: {
+      room: true,
+      roomType: true,
+      reservationGuests: { include: { guest: true }, where: { isPrimary: true } },
+    },
     orderBy: { checkOutDate: 'asc' },
   });
 }
@@ -105,7 +125,11 @@ export async function getDepartures(hotelId: string, date: string) {
 export async function getInHouse(hotelId: string) {
   return prisma.reservation.findMany({
     where: { hotelId, status: 'CHECKED_IN' },
-    include: { room: true, roomType: true, reservationGuests: { include: { guest: true }, where: { isPrimary: true } } },
+    include: {
+      room: true,
+      roomType: true,
+      reservationGuests: { include: { guest: true }, where: { isPrimary: true } },
+    },
   });
 }
 
@@ -116,7 +140,9 @@ export async function getRoomRack(hotelId: string) {
       roomType: true,
       reservations: {
         where: { status: { in: ['CONFIRMED', 'CHECKED_IN', 'PENDING'] } },
-        include: { reservationGuests: { include: { guest: true }, where: { isPrimary: true } } },
+        include: {
+          reservationGuests: { include: { guest: true }, where: { isPrimary: true } },
+        },
         take: 1,
       },
     },

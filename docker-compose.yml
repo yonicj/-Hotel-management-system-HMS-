@@ -8,13 +8,13 @@ services:
     environment:
       POSTGRES_USER: hms_admin
       POSTGRES_PASSWORD: hms_secure_pass
-      POSTGRES_DB: ethiopian_hms
+      POSTGRES_DB: hms_db
     ports:
       - '5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U hms_admin -d ethiopian_hms']
+      test: ['CMD-SHELL', 'pg_isready -U hms_admin -d hms_db']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -55,7 +55,7 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://hms_admin:hms_secure_pass@postgres:5432/ethiopian_hms?schema=public
+      DATABASE_URL: postgresql://hms_admin:hms_secure_pass@postgres:5432/hms_db?schema=public
       REDIS_HOST: redis
       REDIS_PORT: 6379
     ports:
@@ -85,7 +85,7 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://hms_admin:hms_secure_pass@postgres:5432/ethiopian_hms?schema=public
+      DATABASE_URL: postgresql://hms_admin:hms_secure_pass@postgres:5432/hms_db?schema=public
       REDIS_HOST: redis
       REDIS_PORT: 6379
     depends_on:

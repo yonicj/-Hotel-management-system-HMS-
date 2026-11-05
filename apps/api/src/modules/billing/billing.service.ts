@@ -15,8 +15,15 @@ async function getFolioOrThrow(folioId: string) {
 export async function getFolio(folioId: string) {
   const folio = await getFolioOrThrow(folioId);
   const totalCharges = folio.charges.reduce((s, c) => s + Number(c.amount), 0);
-  const totalPayments = folio.payments.filter((p) => p.status === 'COMPLETED').reduce((s, p) => s + Number(p.amount), 0);
-  return { ...folio, totalCharges: roundMoney(totalCharges), totalPayments: roundMoney(totalPayments), balance: roundMoney(totalCharges - totalPayments) };
+  const totalPayments = folio.payments
+    .filter((p) => p.status === 'COMPLETED')
+    .reduce((s, p) => s + Number(p.amount), 0);
+  return {
+    ...folio,
+    totalCharges: roundMoney(totalCharges),
+    totalPayments: roundMoney(totalPayments),
+    balance: roundMoney(totalCharges - totalPayments),
+  };
 }
 
 export async function addCharge(folioId: string, input: AddChargeInput, postedBy: string) {
@@ -25,7 +32,15 @@ export async function addCharge(folioId: string, input: AddChargeInput, postedBy
 
   const amount = roundMoney(input.quantity * input.unitPrice);
   return prisma.folioCharge.create({
-    data: { folioId, ...input, amount, chargeType: input.chargeType as any, postedBy },
+    data: {
+      folioId,
+      chargeType: input.chargeType as any,
+      description: input.description,
+      quantity: input.quantity,
+      unitPrice: input.unitPrice,
+      amount,
+      postedBy,
+    },
   });
 }
 
@@ -36,18 +51,30 @@ export async function deleteCharge(folioId: string, chargeId: string) {
 }
 
 export async function addPayment(folioId: string, input: AddPaymentInput, processedBy: string) {
-  const folio = await getFolioOrThrow(folioId);
-  const reservation = await prisma.reservation.findFirst({ where: { folios: { some: { id: folioId } } } });
+  await getFolioOrThrow(folioId);
+  const reservation = await prisma.reservation.findFirst({
+    where: { folios: { some: { id: folioId } } },
+  });
   if (!reservation) throw new AppError('Reservation not found for folio', 404);
 
   return prisma.payment.create({
-    data: { folioId, reservationId: reservation.id, ...input, method: input.method as any, status: 'COMPLETED', processedBy },
+    data: {
+      folioId,
+      reservationId: reservation.id,
+      amount: input.amount,
+      method: input.method as any,
+      referenceNumber: input.referenceNumber,
+      status: 'COMPLETED',
+      processedBy,
+    },
   });
 }
 
 export async function closeFolio(folioId: string) {
   const folio = await getFolio(folioId);
-  if (folio.balance > 0) throw new AppError(`Outstanding balance of ${folio.balance}. Settle before closing.`, 400);
+  if (folio.balance > 0) {
+    throw new AppError(`Outstanding balance of ${folio.balance}. Settle before closing.`, 400);
+  }
   return prisma.folio.update({ where: { id: folioId }, data: { status: 'CLOSED' } });
 }
 

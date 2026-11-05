@@ -4,7 +4,9 @@ import { sendSuccess, sendCreated, sendPaginated } from '../../shared/utils/resp
 
 export async function getReservations(req: Request, res: Response, next: NextFunction) {
   try {
-    const { reservations, pagination } = await service.getReservations(req.user!.hotelId, req.query as any, req.query.page, req.query.limit);
+    const { reservations, pagination } = await service.getReservations(
+      req.user!.hotelId, req.query as any, req.query.page, req.query.limit
+    );
     sendPaginated(res, reservations, pagination);
   } catch (e) { next(e); }
 }
@@ -12,7 +14,12 @@ export async function getReservationById(req: Request, res: Response, next: Next
   try { sendSuccess(res, await service.getReservationById(req.params.id)); } catch (e) { next(e); }
 }
 export async function createReservation(req: Request, res: Response, next: NextFunction) {
-  try { sendCreated(res, await service.createReservation(req.user!.hotelId, req.body, req.user!.userId), 'Reservation created'); } catch (e) { next(e); }
+  try {
+    sendCreated(res,
+      await service.createReservation(req.user!.hotelId, req.body, req.user!.userId),
+      'Reservation created'
+    );
+  } catch (e) { next(e); }
 }
 export async function confirmReservation(req: Request, res: Response, next: NextFunction) {
   try { sendSuccess(res, await service.confirmReservation(req.params.id), 'Reservation confirmed'); } catch (e) { next(e); }

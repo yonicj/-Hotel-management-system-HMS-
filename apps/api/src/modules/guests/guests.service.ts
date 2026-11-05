@@ -7,12 +7,12 @@ export async function getGuests(search: string | undefined, rawPage: unknown, ra
   const { page, limit } = parsePaginationParams(rawPage, rawLimit);
   const skip = getSkip(page, limit);
 
-  const where = search
+  const where: any = search
     ? {
         OR: [
-          { firstName: { contains: search, mode: 'insensitive' as const } },
-          { lastName: { contains: search, mode: 'insensitive' as const } },
-          { email: { contains: search, mode: 'insensitive' as const } },
+          { firstName: { contains: search, mode: 'insensitive' } },
+          { lastName: { contains: search, mode: 'insensitive' } },
+          { email: { contains: search, mode: 'insensitive' } },
           { phone: { contains: search } },
         ],
       }

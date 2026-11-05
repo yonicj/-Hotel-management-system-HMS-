@@ -22,13 +22,20 @@ export async function getRevenueReport(hotelId: string, from: string, to: string
   });
 
   const totalRevenue = audits.reduce((sum, a) => sum + Number(a.totalRevenue), 0);
-  return { totalRevenue, breakdown: audits.map((a) => ({ date: a.auditDate, revenue: Number(a.totalRevenue) })) };
+  return {
+    totalRevenue,
+    breakdown: audits.map((a) => ({ date: a.auditDate, revenue: Number(a.totalRevenue) })),
+  };
 }
 
 export async function getArrivalsDeparturesReport(hotelId: string, date: string) {
   const [arrivals, departures] = await Promise.all([
-    prisma.reservation.count({ where: { hotelId, checkInDate: new Date(date), status: { in: ['CONFIRMED', 'CHECKED_IN'] } } }),
-    prisma.reservation.count({ where: { hotelId, checkOutDate: new Date(date), status: { in: ['CHECKED_IN', 'CHECKED_OUT'] } } }),
+    prisma.reservation.count({
+      where: { hotelId, checkInDate: new Date(date), status: { in: ['CONFIRMED', 'CHECKED_IN'] } },
+    }),
+    prisma.reservation.count({
+      where: { hotelId, checkOutDate: new Date(date), status: { in: ['CHECKED_IN', 'CHECKED_OUT'] } },
+    }),
   ]);
   return { date, arrivals, departures };
 }
@@ -46,7 +53,12 @@ export async function getGuestLedger(hotelId: string) {
   return prisma.folio.findMany({
     where: { reservation: { hotelId }, status: 'OPEN' },
     include: {
-      reservation: { include: { reservationGuests: { include: { guest: true }, where: { isPrimary: true } }, room: true } },
+      reservation: {
+        include: {
+          reservationGuests: { include: { guest: true }, where: { isPrimary: true } },
+          room: true,
+        },
+      },
       charges: true,
       payments: true,
     },

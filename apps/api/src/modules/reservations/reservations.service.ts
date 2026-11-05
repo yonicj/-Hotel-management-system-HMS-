@@ -5,7 +5,9 @@ import { computeRate } from '../rate-plans/rate-plans.service';
 import { CreateReservationInput } from './reservations.schema';
 import { parsePaginationParams, buildPaginationMeta, getSkip } from '@hms/shared-utils';
 
-export async function getReservations(hotelId: string, filters: Record<string, string>, rawPage: unknown, rawLimit: unknown) {
+export async function getReservations(
+  hotelId: string, filters: Record<string, string>, rawPage: unknown, rawLimit: unknown
+) {
   const { page, limit } = parsePaginationParams(rawPage, rawLimit);
   const skip = getSkip(page, limit);
 
@@ -19,7 +21,11 @@ export async function getReservations(hotelId: string, filters: Record<string, s
   const [reservations, total] = await Promise.all([
     prisma.reservation.findMany({
       where,
-      include: { room: true, roomType: true, reservationGuests: { include: { guest: true }, where: { isPrimary: true } } },
+      include: {
+        room: true,
+        roomType: true,
+        reservationGuests: { include: { guest: true }, where: { isPrimary: true } },
+      },
       skip,
       take: limit,
       orderBy: { createdAt: 'desc' },
@@ -33,14 +39,24 @@ export async function getReservations(hotelId: string, filters: Record<string, s
 export async function getReservationById(id: string) {
   const r = await prisma.reservation.findUnique({
     where: { id },
-    include: { room: true, roomType: true, ratePlan: true, reservationGuests: { include: { guest: true } }, folios: true },
+    include: {
+      room: true,
+      roomType: true,
+      ratePlan: true,
+      reservationGuests: { include: { guest: true } },
+      folios: true,
+    },
   });
   if (!r) throw new AppError('Reservation not found', 404);
   return r;
 }
 
-export async function createReservation(hotelId: string, input: CreateReservationInput, createdBy: string) {
-  const { nights, totalAmount } = await computeRate(input.roomTypeId, input.checkInDate, input.checkOutDate);
+export async function createReservation(
+  hotelId: string, input: CreateReservationInput, createdBy: string
+) {
+  const { nights, totalAmount } = await computeRate(
+    input.roomTypeId, input.checkInDate, input.checkOutDate
+  );
   if (nights <= 0) throw new AppError('Check-out date must be after check-in date', 400);
 
   const confirmationNumber = generateConfirmationNumber();
@@ -50,7 +66,6 @@ export async function createReservation(hotelId: string, input: CreateReservatio
       data: {
         confirmationNumber,
         hotelId,
-        guestId: undefined,
         roomTypeId: input.roomTypeId,
         roomId: input.roomId,
         ratePlanId: input.ratePlanId,
@@ -63,14 +78,13 @@ export async function createReservation(hotelId: string, input: CreateReservatio
         totalAmount,
         createdBy,
         status: 'PENDING',
-      } as any,
+      },
     });
 
     await tx.reservationGuest.create({
       data: { reservationId: res.id, guestId: input.guestId, isPrimary: true },
     });
 
-    // Create open folio
     await tx.folio.create({
       data: {
         reservationId: res.id,
@@ -93,7 +107,9 @@ export async function confirmReservation(id: string) {
 
 export async function cancelReservation(id: string) {
   const r = await getReservationById(id);
-  if (['CHECKED_IN', 'CHECKED_OUT'].includes(r.status)) throw new AppError('Cannot cancel an active or completed reservation', 400);
+  if (['CHECKED_IN', 'CHECKED_OUT'].includes(r.status)) {
+    throw new AppError('Cannot cancel an active or completed reservation', 400);
+  }
   return prisma.reservation.update({ where: { id }, data: { status: 'CANCELLED' } });
 }
 

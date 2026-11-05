@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { ReservationSource } from '@hms/shared-types';
 
 export const createReservationSchema = z.object({
   guestId: z.string().uuid(),
@@ -10,7 +9,7 @@ export const createReservationSchema = z.object({
   checkOutDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   adults: z.number().int().min(1).default(1),
   children: z.number().int().min(0).default(0),
-  source: z.nativeEnum(ReservationSource).optional(),
+  source: z.enum(['WALK_IN','PHONE','WEBSITE','OTA_BOOKING','AGENT']).optional(),
   specialRequests: z.string().optional(),
 });
 

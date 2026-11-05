@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { RoomStatus } from '@hms/shared-types';
 
 export const createRoomSchema = z.object({
   roomTypeId: z.string().uuid(),
@@ -9,10 +8,8 @@ export const createRoomSchema = z.object({
   notes: z.string().optional(),
 });
 
-export const updateRoomSchema = createRoomSchema.partial();
-
 export const updateRoomStatusSchema = z.object({
-  status: z.nativeEnum(RoomStatus),
+  status: z.enum(['AVAILABLE', 'OCCUPIED', 'DIRTY', 'CLEAN', 'MAINTENANCE', 'OUT_OF_ORDER']),
   notes: z.string().optional(),
 });
 

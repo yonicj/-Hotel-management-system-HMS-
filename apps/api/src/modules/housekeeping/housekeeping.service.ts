@@ -1,7 +1,6 @@
 import { prisma } from '../../config/database';
 import { AppError } from '../../shared/utils/app-error';
-import { getIO } from '../../config/socket';
-import { SOCKET_EVENTS } from '@hms/shared-types';
+import { emitRoomStatusUpdated } from '../../shared/events/room-status.events';
 import { today } from '@hms/shared-utils';
 import { CreateTaskInput, UpdateTaskStatusInput } from './housekeeping.schema';
 
@@ -11,20 +10,33 @@ export async function getTasks(hotelId: string, date?: string) {
       room: { hotelId },
       scheduledDate: date ? new Date(date) : new Date(today()),
     },
-    include: { room: { include: { roomType: true } }, assignedUser: { select: { id: true, firstName: true, lastName: true } } },
+    include: {
+      room: { include: { roomType: true } },
+      assignedUser: { select: { id: true, firstName: true, lastName: true } },
+    },
     orderBy: { priority: 'asc' },
   });
 }
 
 export async function getTaskById(id: string) {
-  const task = await prisma.housekeepingTask.findUnique({ where: { id }, include: { room: true, assignedUser: true } });
+  const task = await prisma.housekeepingTask.findUnique({
+    where: { id },
+    include: { room: true, assignedUser: true },
+  });
   if (!task) throw new AppError('Task not found', 404);
   return task;
 }
 
 export async function createTask(input: CreateTaskInput) {
   return prisma.housekeepingTask.create({
-    data: { ...input, scheduledDate: new Date(input.scheduledDate), priority: (input.priority as any) ?? 'NORMAL' } as any,
+    data: {
+      roomId: input.roomId,
+      assignedTo: input.assignedTo,
+      taskType: input.taskType as any,
+      priority: (input.priority as any) ?? 'NORMAL',
+      notes: input.notes,
+      scheduledDate: new Date(input.scheduledDate),
+    },
     include: { room: true, assignedUser: true },
   });
 }
@@ -32,18 +44,30 @@ export async function createTask(input: CreateTaskInput) {
 export async function updateTaskStatus(id: string, input: UpdateTaskStatusInput) {
   const task = await getTaskById(id);
 
-  const data: any = { status: input.status, notes: input.notes };
+  const data: any = { status: input.status };
+  if (input.notes) data.notes = input.notes;
   if (input.status === 'IN_PROGRESS') data.startedAt = new Date();
-  if (input.status === 'COMPLETED') data.completedAt = new Date();
-
-  const updated = await prisma.housekeepingTask.update({ where: { id }, data, include: { room: true } });
-
-  // Update room status when task is completed/verified
   if (input.status === 'COMPLETED' || input.status === 'VERIFIED') {
-    await prisma.room.update({ where: { id: task.roomId }, data: { status: 'CLEAN' } });
+    data.completedAt = new Date();
   }
 
-  getIO().to(`hotel:${updated.room.hotelId}`).emit(SOCKET_EVENTS.HOUSEKEEPING_TASK_UPDATED, { task: updated });
+  const updated = await prisma.housekeepingTask.update({
+    where: { id },
+    data,
+    include: { room: true },
+  });
+
+  // When task completed/verified → room becomes CLEAN
+  if (input.status === 'COMPLETED' || input.status === 'VERIFIED') {
+    await prisma.room.update({ where: { id: task.roomId }, data: { status: 'CLEAN' } });
+    emitRoomStatusUpdated(updated.room.hotelId, {
+      roomId: task.roomId,
+      roomNumber: updated.room.roomNumber,
+      status: 'CLEAN',
+      updatedBy: task.assignedTo,
+      updatedAt: new Date().toISOString(),
+    });
+  }
 
   return updated;
 }

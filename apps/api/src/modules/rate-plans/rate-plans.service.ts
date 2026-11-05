@@ -9,7 +9,12 @@ export async function getRatePlans(hotelId: string) {
 
 export async function createRatePlan(hotelId: string, input: CreateRatePlanInput) {
   return prisma.ratePlan.create({
-    data: { ...input, hotelId, startDate: new Date(input.startDate), endDate: new Date(input.endDate) },
+    data: {
+      ...input,
+      hotelId,
+      startDate: new Date(input.startDate),
+      endDate: new Date(input.endDate),
+    },
   });
 }
 

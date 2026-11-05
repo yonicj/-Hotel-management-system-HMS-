@@ -11,11 +11,12 @@ export async function getRooms(hotelId: string) {
   });
 }
 
-export async function getRoomAvailability(hotelId: string, checkIn: string, checkOut: string, roomTypeId?: string) {
+export async function getRoomAvailability(
+  hotelId: string, checkIn: string, checkOut: string, roomTypeId?: string
+) {
   const where: any = { hotelId, status: 'AVAILABLE' };
   if (roomTypeId) where.roomTypeId = roomTypeId;
 
-  // Exclude rooms with overlapping confirmed/checked-in reservations
   where.reservations = {
     none: {
       status: { in: ['CONFIRMED', 'CHECKED_IN'] },
@@ -37,7 +38,9 @@ export async function createRoom(hotelId: string, input: CreateRoomInput) {
   return prisma.room.create({ data: { ...input, hotelId }, include: { roomType: true } });
 }
 
-export async function updateRoomStatus(id: string, input: UpdateRoomStatusInput, updatedBy: string, hotelId: string) {
+export async function updateRoomStatus(
+  id: string, input: UpdateRoomStatusInput, updatedBy: string, hotelId: string
+) {
   const room = await getRoomById(id);
   const updated = await prisma.room.update({
     where: { id },

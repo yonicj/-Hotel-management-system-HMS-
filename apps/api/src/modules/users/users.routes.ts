@@ -6,7 +6,6 @@ import { validate } from '../../shared/middleware/validate';
 import { createUserSchema, updateUserSchema } from './users.schema';
 
 const router = Router();
-
 router.use(authenticate);
 
 router.get('/', authorize('users', 'read'), ctrl.getUsers);

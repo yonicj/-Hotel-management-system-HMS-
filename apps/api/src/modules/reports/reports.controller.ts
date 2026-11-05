@@ -17,12 +17,16 @@ export async function getRevenueReport(req: Request, res: Response, next: NextFu
 }
 export async function getArrivalsDeparturesReport(req: Request, res: Response, next: NextFunction) {
   try {
-    sendSuccess(res, await service.getArrivalsDeparturesReport(req.user!.hotelId, (req.query.date as string) || today()));
+    sendSuccess(res, await service.getArrivalsDeparturesReport(
+      req.user!.hotelId, (req.query.date as string) || today()
+    ));
   } catch (e) { next(e); }
 }
 export async function getHousekeepingSummary(req: Request, res: Response, next: NextFunction) {
   try {
-    sendSuccess(res, await service.getHousekeepingSummary(req.user!.hotelId, (req.query.date as string) || today()));
+    sendSuccess(res, await service.getHousekeepingSummary(
+      req.user!.hotelId, (req.query.date as string) || today()
+    ));
   } catch (e) { next(e); }
 }
 export async function getGuestLedger(req: Request, res: Response, next: NextFunction) {

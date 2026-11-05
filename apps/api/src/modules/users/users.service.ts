@@ -11,7 +11,11 @@ export async function getUsers(hotelId: string, rawPage: unknown, rawLimit: unkn
   const [users, total] = await Promise.all([
     prisma.user.findMany({
       where: { hotelId },
-      select: { id: true, firstName: true, lastName: true, email: true, isActive: true, lastLogin: true, createdAt: true, role: { select: { id: true, name: true } } },
+      select: {
+        id: true, firstName: true, lastName: true, email: true,
+        isActive: true, lastLogin: true, createdAt: true,
+        role: { select: { id: true, name: true } },
+      },
       skip,
       take: limit,
       orderBy: { createdAt: 'desc' },
@@ -25,7 +29,10 @@ export async function getUsers(hotelId: string, rawPage: unknown, rawLimit: unkn
 export async function getUserById(id: string) {
   const user = await prisma.user.findUnique({
     where: { id },
-    select: { id: true, firstName: true, lastName: true, email: true, isActive: true, lastLogin: true, createdAt: true, role: true },
+    select: {
+      id: true, firstName: true, lastName: true, email: true,
+      isActive: true, lastLogin: true, createdAt: true, role: true,
+    },
   });
   if (!user) throw new AppError('User not found', 404);
   return user;
@@ -36,8 +43,9 @@ export async function createUser(input: CreateUserInput) {
   if (exists) throw new AppError('Email already in use', 409);
 
   const passwordHash = await bcrypt.hash(input.password, 12);
+  const { password, ...rest } = input;
   return prisma.user.create({
-    data: { ...input, passwordHash, password: undefined } as any,
+    data: { ...rest, passwordHash },
     select: { id: true, firstName: true, lastName: true, email: true, isActive: true, createdAt: true },
   });
 }
@@ -51,7 +59,7 @@ export async function updateUser(id: string, input: UpdateUserInput) {
   });
 }
 
-export async function deleteUser(id: string) {
+export async function deactivateUser(id: string) {
   await getUserById(id);
   await prisma.user.update({ where: { id }, data: { isActive: false } });
 }
