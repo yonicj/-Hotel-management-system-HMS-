@@ -12,7 +12,6 @@
     "dev": "turbo run dev",
     "dev:web": "turbo run dev --filter=@ehms/web",
     "dev:api": "turbo run dev --filter=@ehms/api",
-    "dev:tauri": "pnpm --filter=@ehms/tauri tauri dev",
     "build": "turbo run build",
     "build:web": "turbo run build --filter=@ehms/web",
     "build:api": "turbo run build --filter=@ehms/api",
@@ -20,15 +19,20 @@
     "type-check": "turbo run type-check",
     "test": "turbo run test",
     "test:e2e": "playwright test",
-    "db:migrate": "pnpm --filter=@ehms/api prisma migrate dev",
-    "db:seed": "pnpm --filter=@ehms/api prisma db seed",
+    "db:migrate": "pnpm --filter=@ehms/api prisma:migrate",
+    "db:seed": "pnpm --filter=@ehms/api prisma:seed",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down"
   },
   "devDependencies": {
+    "@playwright/test": "^1.44.0",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "eslint": "^8.57.1",
+    "prettier": "^3.2.5",
     "turbo": "^2.0.0",
     "typescript": "^5.4.5",
-    "prettier": "^3.2.5"
+    "vitest": "^1.6.0"
   },
   "engines": {
     "node": ">=20.0.0",

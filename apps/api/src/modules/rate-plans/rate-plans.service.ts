@@ -1,6 +1,6 @@
 import { prisma } from '../../config/database';
 import { AppError } from '../../shared/utils/app-error';
-import { calculateNights } from '@hms/shared-utils';
+import { calculateNights } from '@ehms/utils';
 import { CreateRatePlanInput } from './rate-plans.schema';
 
 export async function getRatePlans(hotelId: string) {
@@ -14,7 +14,7 @@ export async function createRatePlan(hotelId: string, input: CreateRatePlanInput
       hotelId,
       startDate: new Date(input.startDate),
       endDate: new Date(input.endDate),
-    },
+    } as any,
   });
 }
 

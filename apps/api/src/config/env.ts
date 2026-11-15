@@ -9,7 +9,7 @@ function requireEnv(key: string): string {
 
 export const env = {
   NODE_ENV: process.env.NODE_ENV || 'development',
-  PORT: parseInt(process.env.PORT || '5000', 10),
+  PORT: parseInt(process.env.PORT || '4000', 10),
 
   DATABASE_URL: requireEnv('DATABASE_URL'),
   REDIS_URL: process.env.REDIS_URL || 'redis://localhost:6379',
@@ -19,5 +19,5 @@ export const env = {
   JWT_ACCESS_EXPIRES_IN: process.env.JWT_ACCESS_EXPIRES_IN || '15m',
   JWT_REFRESH_EXPIRES_IN: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
 
-  CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:5173',
+  CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:3000',
 } as const;

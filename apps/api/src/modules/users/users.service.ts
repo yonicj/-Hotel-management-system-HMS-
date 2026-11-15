@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '../../config/database';
 import { AppError } from '../../shared/utils/app-error';
 import { CreateUserInput, UpdateUserInput } from './users.schema';
-import { parsePaginationParams, buildPaginationMeta, getSkip } from '@hms/shared-utils';
+import { parsePaginationParams, buildPaginationMeta, getSkip } from '@ehms/utils';
 
 export async function getUsers(hotelId: string, rawPage: unknown, rawLimit: unknown) {
   const { page, limit } = parsePaginationParams(rawPage, rawLimit);
@@ -43,9 +43,9 @@ export async function createUser(input: CreateUserInput) {
   if (exists) throw new AppError('Email already in use', 409);
 
   const passwordHash = await bcrypt.hash(input.password, 12);
-  const { password, ...rest } = input;
+  const { password: _password, ...rest } = input;
   return prisma.user.create({
-    data: { ...rest, passwordHash },
+    data: { ...rest, passwordHash } as any,
     select: { id: true, firstName: true, lastName: true, email: true, isActive: true, createdAt: true },
   });
 }

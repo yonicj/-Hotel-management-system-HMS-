@@ -1,6 +1,6 @@
 import { prisma } from '../../config/database';
 import { AppError } from '../../shared/utils/app-error';
-import { today } from '@hms/shared-utils';
+import { today } from '@ehms/utils';
 
 export async function getNightAuditStatus(hotelId: string) {
   const auditDate = today();

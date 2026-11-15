@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import * as service from './reports.service';
 import { sendSuccess } from '../../shared/utils/response';
-import { today } from '@hms/shared-utils';
+import { today } from '@ehms/utils';
 
 export async function getOccupancyReport(req: Request, res: Response, next: NextFunction) {
   try {

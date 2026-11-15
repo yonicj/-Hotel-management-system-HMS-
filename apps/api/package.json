@@ -1,5 +1,5 @@
 {
-  "name": "@hms/api",
+  "name": "@ehms/api",
   "version": "1.0.0",
   "private": true,
   "scripts": {
@@ -8,6 +8,7 @@
     "start": "node dist/app.js",
     "type-check": "tsc --noEmit --project tsconfig.json",
     "lint": "eslint src --ext .ts",
+    "test": "vitest run --passWithNoTests",
     "prisma:generate": "prisma generate --schema=src/database/prisma/schema.prisma",
     "prisma:migrate": "prisma migrate dev --schema=src/database/prisma/schema.prisma",
     "prisma:migrate:deploy": "prisma migrate deploy --schema=src/database/prisma/schema.prisma",
@@ -15,8 +16,8 @@
     "prisma:seed": "ts-node --project tsconfig.json src/database/prisma/seed.ts"
   },
   "dependencies": {
-    "@hms/shared-types": "workspace:*",
-    "@hms/shared-utils": "workspace:*",
+    "@ehms/types": "workspace:*",
+    "@ehms/utils": "workspace:*",
     "@prisma/client": "^5.14.0",
     "bcryptjs": "^2.4.3",
     "compression": "^1.7.4",

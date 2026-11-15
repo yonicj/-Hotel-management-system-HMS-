@@ -1,6 +1,6 @@
 import { prisma } from '../../config/database';
 import { AppError } from '../../shared/utils/app-error';
-import { roundMoney } from '@hms/shared-utils';
+import { roundMoney } from '@ehms/utils';
 import { AddChargeInput, AddPaymentInput } from './billing.schema';
 
 async function getFolioOrThrow(folioId: string) {

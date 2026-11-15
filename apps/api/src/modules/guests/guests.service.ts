@@ -1,7 +1,7 @@
 import { prisma } from '../../config/database';
 import { AppError } from '../../shared/utils/app-error';
 import { CreateGuestInput, UpdateGuestInput } from './guests.schema';
-import { parsePaginationParams, buildPaginationMeta, getSkip } from '@hms/shared-utils';
+import { parsePaginationParams, buildPaginationMeta, getSkip } from '@ehms/utils';
 
 export async function getGuests(search: string | undefined, rawPage: unknown, rawLimit: unknown) {
   const { page, limit } = parsePaginationParams(rawPage, rawLimit);

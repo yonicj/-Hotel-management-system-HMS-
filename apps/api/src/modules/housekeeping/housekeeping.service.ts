@@ -1,7 +1,7 @@
 import { prisma } from '../../config/database';
 import { AppError } from '../../shared/utils/app-error';
 import { emitRoomStatusUpdated } from '../../shared/events/room-status.events';
-import { today } from '@hms/shared-utils';
+import { today } from '@ehms/utils';
 import { CreateTaskInput, UpdateTaskStatusInput } from './housekeeping.schema';
 
 export async function getTasks(hotelId: string, date?: string) {

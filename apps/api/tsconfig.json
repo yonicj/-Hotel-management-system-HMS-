@@ -12,12 +12,7 @@
     "forceConsistentCasingInFileNames": false,
     "resolveJsonModule": true,
     "declaration": false,
-    "sourceMap": true,
-    "baseUrl": ".",
-    "paths": {
-      "@hms/shared-types": ["../../packages/shared-types/src"],
-      "@hms/shared-utils": ["../../packages/shared-utils/src"]
-    }
+    "sourceMap": true
   },
   "include": ["src"],
   "exclude": ["node_modules", "dist"]

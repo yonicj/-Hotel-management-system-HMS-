@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import * as service from './front-desk.service';
 import { sendSuccess } from '../../shared/utils/response';
-import { today } from '@hms/shared-utils';
+import { today } from '@ehms/utils';
 
 export async function checkIn(req: Request, res: Response, next: NextFunction) {
   try { sendSuccess(res, await service.checkIn(req.params.reservationId, req.user!.userId), 'Guest checked in'); } catch (e) { next(e); }

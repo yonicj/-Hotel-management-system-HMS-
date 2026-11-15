@@ -1,30 +1,28 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: ehms-postgres
+    container_name: ${POSTGRES_CONTAINER_NAME:-ehms-postgres}
     restart: unless-stopped
     environment:
-      POSTGRES_USER: hms_admin
-      POSTGRES_PASSWORD: hms_secure_pass
-      POSTGRES_DB: hms_db
+      POSTGRES_USER: ${POSTGRES_USER:-hms_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hms_secure_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-hms_db}
     ports:
-      - '5432:5432'
+      - '${POSTGRES_PORT:-5432}:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U hms_admin -d hms_db']
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-hms_admin} -d ${POSTGRES_DB:-hms_db}']
       interval: 10s
       timeout: 5s
       retries: 5
 
   redis:
     image: redis:7-alpine
-    container_name: ehms-redis
+    container_name: ${REDIS_CONTAINER_NAME:-ehms-redis}
     restart: unless-stopped
     ports:
-      - '6379:6379'
+      - '${REDIS_PORT:-6379}:6379'
     volumes:
       - redis_data:/data
     healthcheck:
@@ -35,15 +33,15 @@ services:
 
   object-storage:
     image: minio/minio:latest
-    container_name: ehms-minio
+    container_name: ${MINIO_CONTAINER_NAME:-ehms-minio}
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
     ports:
-      - '9000:9000'
-      - '9001:9001'
+      - '${S3_PORT:-9000}:9000'
+      - '${S3_CONSOLE_PORT:-9001}:9001'
     volumes:
       - minio_data:/data
 
@@ -51,15 +49,19 @@ services:
     build:
       context: .
       dockerfile: infrastructure/docker/api.Dockerfile
-    container_name: ehms-api
+    container_name: ${API_CONTAINER_NAME:-ehms-api}
     restart: unless-stopped
     environment:
-      NODE_ENV: production
-      DATABASE_URL: postgresql://hms_admin:hms_secure_pass@postgres:5432/hms_db?schema=public
+      NODE_ENV: ${NODE_ENV:-production}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-hms_admin}:${POSTGRES_PASSWORD:-hms_secure_pass}@postgres:5432/${POSTGRES_DB:-hms_db}?schema=public
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      PORT: ${PORT:-4000}
+      CLIENT_URL: ${CLIENT_URL:-http://localhost:3000}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-hms_super_secret_access_jwt_key_2026_dev_secure}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-hms_super_secret_refresh_jwt_key_2026_dev_secure}
     ports:
-      - '4000:4000'
+      - '${PORT:-4000}:4000'
     depends_on:
       postgres:
         condition: service_healthy
@@ -70,10 +72,10 @@ services:
     build:
       context: .
       dockerfile: infrastructure/docker/web.Dockerfile
-    container_name: ehms-web
+    container_name: ${WEB_CONTAINER_NAME:-ehms-web}
     restart: unless-stopped
     ports:
-      - '3000:3000'
+      - '${WEB_PORT:-3000}:3000'
     depends_on:
       - api
 
@@ -81,11 +83,11 @@ services:
     build:
       context: .
       dockerfile: infrastructure/docker/worker.Dockerfile
-    container_name: ehms-worker
+    container_name: ${WORKER_CONTAINER_NAME:-ehms-worker}
     restart: unless-stopped
     environment:
-      NODE_ENV: production
-      DATABASE_URL: postgresql://hms_admin:hms_secure_pass@postgres:5432/hms_db?schema=public
+      NODE_ENV: ${NODE_ENV:-production}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-hms_admin}:${POSTGRES_PASSWORD:-hms_secure_pass}@postgres:5432/${POSTGRES_DB:-hms_db}?schema=public
       REDIS_HOST: redis
       REDIS_PORT: 6379
     depends_on:

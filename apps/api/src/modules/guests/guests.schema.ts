@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { GuestIdType, VipLevel } from '@hms/shared-types';
+import { GuestIdType, VipLevel } from '@ehms/types';
 
 export const createGuestSchema = z.object({
   firstName: z.string().min(1),

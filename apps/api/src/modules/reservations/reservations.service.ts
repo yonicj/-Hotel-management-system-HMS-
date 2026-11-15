@@ -1,9 +1,8 @@
 import { prisma } from '../../config/database';
 import { AppError } from '../../shared/utils/app-error';
-import { generateConfirmationNumber } from '@hms/shared-utils';
+import { generateConfirmationNumber, parsePaginationParams, buildPaginationMeta, getSkip } from '@ehms/utils';
 import { computeRate } from '../rate-plans/rate-plans.service';
 import { CreateReservationInput } from './reservations.schema';
-import { parsePaginationParams, buildPaginationMeta, getSkip } from '@hms/shared-utils';
 
 export async function getReservations(
   hotelId: string, filters: Record<string, string>, rawPage: unknown, rawLimit: unknown
