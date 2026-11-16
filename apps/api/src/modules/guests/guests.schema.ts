@@ -4,7 +4,7 @@ import { GuestIdType, VipLevel } from '@ehms/types';
 export const createGuestSchema = z.object({
   firstName: z.string().min(1),
   lastName: z.string().min(1),
-  email: z.string().email(),
+  email: z.string().email().optional(),
   phone: z.string().min(7),
   nationality: z.string().optional(),
   idType: z.nativeEnum(GuestIdType).optional(),

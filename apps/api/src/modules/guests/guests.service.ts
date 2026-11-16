@@ -33,8 +33,10 @@ export async function getGuestById(id: string) {
 }
 
 export async function createGuest(input: CreateGuestInput) {
-  const exists = await prisma.guest.findUnique({ where: { email: input.email } });
-  if (exists) throw new AppError('Guest with this email already exists', 409);
+  if (input.email) {
+    const exists = await prisma.guest.findUnique({ where: { email: input.email } });
+    if (exists) throw new AppError('Guest with this email already exists', 409);
+  }
   return prisma.guest.create({ data: input as any });
 }
 

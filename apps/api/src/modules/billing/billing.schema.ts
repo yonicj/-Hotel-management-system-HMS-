@@ -9,7 +9,7 @@ export const addChargeSchema = z.object({
 
 export const addPaymentSchema = z.object({
   amount: z.number().positive(),
-  method: z.enum(['CASH', 'CREDIT_CARD', 'DEBIT_CARD', 'BANK_TRANSFER', 'MPESA', 'VOUCHER']),
+  method: z.enum(['CASH', 'CREDIT_CARD', 'DEBIT_CARD', 'BANK_TRANSFER', 'TELEBIRR', 'CBE_BIRR', 'VOUCHER']),
   referenceNumber: z.string().optional(),
 });
 

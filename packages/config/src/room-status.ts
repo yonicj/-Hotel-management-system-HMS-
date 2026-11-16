@@ -5,5 +5,5 @@ export const ROOM_STATUSES = {
   DIRTY: { code: 'DIRTY', label: 'Dirty', color: '#EF4444' },
   CLEANING: { code: 'CLEANING', label: 'Cleaning', color: '#8B5CF6' },
   MAINTENANCE: { code: 'MAINTENANCE', label: 'Maintenance', color: '#6B7280' },
-  OUT_OF_ORDER: { code: 'OUT_OF_ORDER', label: 'Out of Order', color: '#1F2937' },
+  OUT_OF_SERVICE: { code: 'OUT_OF_SERVICE', label: 'Out of Service', color: '#1F2937' },
 } as const;

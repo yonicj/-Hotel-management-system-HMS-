@@ -6,8 +6,8 @@ import { CreateRoomInput, UpdateRoomStatusInput } from './rooms.schema';
 export async function getRooms(hotelId: string) {
   return prisma.room.findMany({
     where: { hotelId },
-    include: { roomType: true },
-    orderBy: [{ floor: 'asc' }, { roomNumber: 'asc' }],
+    include: { roomType: true, floor: true },
+    orderBy: [{ floor: { floorNumber: 'asc' } }, { roomNumber: 'asc' }],
   });
 }
 
@@ -29,13 +29,13 @@ export async function getRoomAvailability(
 }
 
 export async function getRoomById(id: string) {
-  const room = await prisma.room.findUnique({ where: { id }, include: { roomType: true } });
+  const room = await prisma.room.findUnique({ where: { id }, include: { roomType: true, floor: true } });
   if (!room) throw new AppError('Room not found', 404);
   return room;
 }
 
 export async function createRoom(hotelId: string, input: CreateRoomInput) {
-  return prisma.room.create({ data: { ...input, hotelId } as any, include: { roomType: true } });
+  return prisma.room.create({ data: { ...input, hotelId } as any, include: { roomType: true, floor: true } });
 }
 
 export async function updateRoomStatus(

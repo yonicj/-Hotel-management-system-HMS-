@@ -106,7 +106,7 @@ export async function confirmReservation(id: string) {
 
 export async function cancelReservation(id: string) {
   const r = await getReservationById(id);
-  if (['CHECKED_IN', 'CHECKED_OUT'].includes(r.status)) {
+  if (['CHECKED_IN', 'COMPLETED'].includes(r.status)) {
     throw new AppError('Cannot cancel an active or completed reservation', 400);
   }
   return prisma.reservation.update({ where: { id }, data: { status: 'CANCELLED' } });

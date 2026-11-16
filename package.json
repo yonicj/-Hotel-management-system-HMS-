@@ -19,6 +19,7 @@
     "type-check": "turbo run type-check",
     "test": "turbo run test",
     "test:e2e": "playwright test",
+    "test:guards": "pnpm --filter=@ehms/api verify:guards",
     "db:migrate": "pnpm --filter=@ehms/api prisma:migrate",
     "db:seed": "pnpm --filter=@ehms/api prisma:seed",
     "docker:up": "docker compose up -d",

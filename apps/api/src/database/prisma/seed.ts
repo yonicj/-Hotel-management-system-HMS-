@@ -190,6 +190,29 @@ async function main() {
   }
   console.log('✅ Room types seeded');
 
+  // ─── Floors ───────────────────────────────────────────────────────────────
+  const floorNumbers = [1, 2, 3];
+  const floors: Record<number, any> = {};
+
+  for (const floorNumber of floorNumbers) {
+    const existing = await prisma.floor.findUnique({
+      where: { hotelId_floorNumber: { hotelId: hotel.id, floorNumber } },
+    });
+    if (!existing) {
+      const fl = await prisma.floor.create({
+        data: {
+          hotelId: hotel.id,
+          floorNumber,
+          name: `Floor ${floorNumber}`,
+        },
+      });
+      floors[floorNumber] = fl;
+    } else {
+      floors[floorNumber] = existing;
+    }
+  }
+  console.log('✅ Floors seeded (3 floors)');
+
   // ─── Rooms ────────────────────────────────────────────────────────────────
   const roomDefs = [
     { roomNumber: '101', floor: 1, typeIndex: 0 },
@@ -209,8 +232,8 @@ async function main() {
         data: {
           hotelId: hotel.id,
           roomTypeId: createdRoomTypes[def.typeIndex].id,
+          floorId: floors[def.floor].id,
           roomNumber: def.roomNumber,
-          floor: def.floor,
           status: 'AVAILABLE',
         },
       });

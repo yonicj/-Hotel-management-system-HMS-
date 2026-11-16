@@ -57,13 +57,13 @@ export async function updateTaskStatus(id: string, input: UpdateTaskStatusInput)
     include: { room: true },
   });
 
-  // When task completed/verified → room becomes CLEAN
+  // When task completed/verified → room becomes AVAILABLE
   if (input.status === 'COMPLETED' || input.status === 'VERIFIED') {
-    await prisma.room.update({ where: { id: task.roomId }, data: { status: 'CLEAN' } });
+    await prisma.room.update({ where: { id: task.roomId }, data: { status: 'AVAILABLE' } });
     emitRoomStatusUpdated(updated.room.hotelId, {
       roomId: task.roomId,
       roomNumber: updated.room.roomNumber,
-      status: 'CLEAN',
+      status: 'AVAILABLE',
       updatedBy: task.assignedTo,
       updatedAt: new Date().toISOString(),
     });
@@ -77,6 +77,7 @@ export async function getHousekeepingBoard(hotelId: string) {
     where: { hotelId },
     include: {
       roomType: true,
+      floor: true,
       housekeepingTasks: {
         where: { scheduledDate: new Date(today()) },
         include: { assignedUser: { select: { id: true, firstName: true, lastName: true } } },
@@ -84,6 +85,6 @@ export async function getHousekeepingBoard(hotelId: string) {
         take: 1,
       },
     },
-    orderBy: [{ floor: 'asc' }, { roomNumber: 'asc' }],
+    orderBy: [{ floor: { floorNumber: 'asc' } }, { roomNumber: 'asc' }],
   });
 }

@@ -13,7 +13,8 @@
     "prisma:migrate": "prisma migrate dev --schema=src/database/prisma/schema.prisma",
     "prisma:migrate:deploy": "prisma migrate deploy --schema=src/database/prisma/schema.prisma",
     "prisma:studio": "prisma studio --schema=src/database/prisma/schema.prisma",
-    "prisma:seed": "ts-node --project tsconfig.json src/database/prisma/seed.ts"
+    "prisma:seed": "ts-node --project tsconfig.json src/database/prisma/seed.ts",
+    "verify:guards": "ts-node --transpile-only --project tsconfig.json src/database/verify-phase1-guards.ts"
   },
   "dependencies": {
     "@ehms/types": "workspace:*",

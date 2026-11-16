@@ -34,7 +34,7 @@ export async function getArrivalsDeparturesReport(hotelId: string, date: string)
       where: { hotelId, checkInDate: new Date(date), status: { in: ['CONFIRMED', 'CHECKED_IN'] } },
     }),
     prisma.reservation.count({
-      where: { hotelId, checkOutDate: new Date(date), status: { in: ['CHECKED_IN', 'CHECKED_OUT'] } },
+      where: { hotelId, checkOutDate: new Date(date), status: { in: ['CHECKED_IN', 'COMPLETED'] } },
     }),
   ]);
   return { date, arrivals, departures };

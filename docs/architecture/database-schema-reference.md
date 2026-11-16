@@ -7,25 +7,30 @@
 ## Table of Contents
 
 1. [hotels](#hotels)
-2. [room_types](#room_types)
-3. [rooms](#rooms)
-4. [rate_plans](#rate_plans)
-5. [guests](#guests)
-6. [reservations](#reservations)
-7. [reservation_guests](#reservation_guests)
-8. [folios](#folios)
-9. [folio_charges](#folio_charges)
-10. [payments](#payments)
-11. [housekeeping_tasks](#housekeeping_tasks)
-12. [users](#users)
-13. [roles](#roles)
-14. [permissions](#permissions)
-15. [role_permissions](#role_permissions)
-16. [audit_logs](#audit_logs)
-17. [night_audit_logs](#night_audit_logs)
-18. [Relationships Diagram](#relationships-diagram)
-19. [Enums Reference](#enums-reference)
-20. [Index Strategy](#index-strategy)
+2. [floors](#floors)
+3. [room_types](#room_types)
+4. [rooms](#rooms)
+5. [rate_plans](#rate_plans)
+6. [guests](#guests)
+7. [reservations](#reservations)
+8. [reservation_guests](#reservation_guests)
+9. [folios](#folios)
+10. [folio_charges](#folio_charges)
+11. [payments](#payments)
+12. [refunds](#refunds)
+13. [services](#services)
+14. [service_orders](#service_orders)
+15. [housekeeping_tasks](#housekeeping_tasks)
+16. [maintenance_reports](#maintenance_reports)
+17. [users](#users)
+18. [roles](#roles)
+19. [permissions](#permissions)
+20. [role_permissions](#role_permissions)
+21. [audit_logs](#audit_logs)
+22. [night_audit_logs](#night_audit_logs)
+23. [Relationships Diagram](#relationships-diagram)
+24. [Enums Reference](#enums-reference)
+25. [Index Strategy](#index-strategy)
 
 ---
 
@@ -42,8 +47,25 @@ Supports multi-property expansion. Every resource (rooms, users, reservations) b
 | country     | VARCHAR(100) | NOT NULL          |                                |
 | phone       | VARCHAR(30)  | NOT NULL          |                                |
 | email       | VARCHAR(150) | NOT NULL          |                                |
-| timezone    | VARCHAR(60)  | default 'UTC'     | e.g. `Africa/Nairobi`          |
+| timezone    | VARCHAR(60)  | default 'Africa/Addis_Ababa' | e.g. `Africa/Addis_Ababa`      |
 | created_at  | TIMESTAMPTZ  | default now()     |                                |
+
+---
+
+## floors
+
+Hotel floor definitions. Groups rooms per property floor.
+
+| Column       | Type         | Constraints          | Notes                          |
+|--------------|--------------|----------------------|--------------------------------|
+| id           | UUID         | PK                   |                                |
+| hotel_id     | UUID         | FK → hotels          |                                |
+| floor_number | INT          | NOT NULL             | e.g. 1, 2, 3                   |
+| name         | VARCHAR(100) | nullable             | e.g. `Ground Floor`, `Penthouse` |
+| description  | TEXT         | nullable             |                                |
+| created_at   | TIMESTAMPTZ  | default now()        |                                |
+
+**Indexes:** `hotel_id`, unique `(hotel_id, floor_number)`
 
 ---
 
@@ -75,14 +97,14 @@ Individual physical rooms in the hotel.
 | id           | UUID         | PK                    |                                |
 | hotel_id     | UUID         | FK → hotels           |                                |
 | room_type_id | UUID         | FK → room_types       |                                |
+| floor_id     | UUID         | FK → floors           |                                |
 | room_number  | VARCHAR(20)  | NOT NULL              | e.g. `101`, `2A`               |
-| floor        | INT          | NOT NULL              |                                |
 | status       | ENUM         | NOT NULL, default AVAILABLE | See RoomStatus enum     |
 | is_smoking   | BOOLEAN      | default false         |                                |
 | notes        | TEXT         | nullable              |                                |
 | created_at   | TIMESTAMPTZ  | default now()         |                                |
 
-**Indexes:** `hotel_id`, `status`, `room_type_id`
+**Indexes:** `hotel_id`, `status`, `room_type_id`, `floor_id`
 
 ---
 
@@ -115,7 +137,7 @@ Master guest registry. Shared across hotels in a multi-property setup.
 | id           | UUID         | PK              |                                 |
 | first_name   | VARCHAR(100) | NOT NULL        |                                 |
 | last_name    | VARCHAR(100) | NOT NULL        |                                 |
-| email        | VARCHAR(150) | UNIQUE          |                                 |
+| email        | VARCHAR(150) | UNIQUE, nullable| Optional for walk-in guests    |
 | phone        | VARCHAR(30)  | NOT NULL        |                                 |
 | nationality  | VARCHAR(100) | nullable        |                                 |
 | id_type      | ENUM         | nullable        | passport / national_id / driving_license |
@@ -230,6 +252,65 @@ Payments applied against a folio. Supports multiple payment methods per folio.
 
 ---
 
+## refunds
+
+Guest refunds against payments and folios.
+
+| Column       | Type          | Constraints       |
+|--------------|---------------|-------------------|
+| id           | UUID          | PK                |
+| payment_id   | UUID          | FK → payments     |
+| folio_id     | UUID          | FK → folios       |
+| amount       | DECIMAL(10,2) | NOT NULL          |
+| reason       | TEXT          | NOT NULL          |
+| status       | ENUM          | default PENDING   |
+| processed_by | UUID          | FK → users        |
+| processed_at | TIMESTAMPTZ   | default now()     |
+
+**Indexes:** `payment_id`, `folio_id`, `processed_by`
+
+---
+
+## services
+
+Catalog of hotel billable services (e.g. laundry, airport shuttle, spa).
+
+| Column       | Type          | Constraints       |
+|--------------|---------------|-------------------|
+| id           | UUID          | PK                |
+| hotel_id     | UUID          | FK → hotels       |
+| name         | VARCHAR(100)  | NOT NULL          |
+| category     | VARCHAR(100)  | NOT NULL          |
+| unit_price   | DECIMAL(10,2) | NOT NULL          |
+| is_active    | BOOLEAN       | default true      |
+| created_at   | TIMESTAMPTZ   | default now()     |
+
+**Indexes:** `hotel_id`, `category`
+
+---
+
+## service_orders
+
+Service requests and orders billed to a reservation/folio.
+
+| Column         | Type          | Constraints       |
+|----------------|---------------|-------------------|
+| id             | UUID          | PK                |
+| reservation_id | UUID          | FK → reservations |
+| folio_id       | UUID          | FK → folios       |
+| service_id     | UUID          | FK → services     |
+| quantity       | INT           | default 1         |
+| unit_price     | DECIMAL(10,2) | NOT NULL          |
+| total_amount   | DECIMAL(10,2) | NOT NULL          |
+| status         | ENUM          | default PENDING   |
+| notes          | TEXT          | nullable          |
+| ordered_by     | UUID          | FK → users        |
+| ordered_at     | TIMESTAMPTZ   | default now()     |
+
+**Indexes:** `reservation_id`, `folio_id`, `service_id`, `ordered_by`
+
+---
+
 ## housekeeping_tasks
 
 Tracks cleaning and maintenance tasks assigned to housekeeping staff.
@@ -249,6 +330,27 @@ Tracks cleaning and maintenance tasks assigned to housekeeping staff.
 | created_at     | TIMESTAMPTZ | default now()        |
 
 **Indexes:** `room_id`, `assigned_to`, `status`, `scheduled_date`
+
+---
+
+## maintenance_reports
+
+Tracks room defect and maintenance work reports.
+
+| Column       | Type        | Constraints                    |
+|--------------|-------------|--------------------------------|
+| id           | UUID        | PK                             |
+| room_id      | UUID        | FK → rooms                     |
+| reported_by  | UUID        | FK → users                     |
+| resolved_by  | UUID        | FK → users, nullable           |
+| issue_type   | VARCHAR(100)| NOT NULL                       |
+| description  | TEXT        | NOT NULL                       |
+| priority     | ENUM        | default NORMAL                 |
+| status       | ENUM        | default REPORTED               |
+| reported_at  | TIMESTAMPTZ | default now()                  |
+| resolved_at  | TIMESTAMPTZ | nullable                       |
+
+**Indexes:** `room_id`, `reported_by`, `status`
 
 ---
 
@@ -377,10 +479,10 @@ hotels
 ## Enums Reference
 
 ### RoomStatus
-`AVAILABLE` · `OCCUPIED` · `DIRTY` · `CLEAN` · `MAINTENANCE` · `OUT_OF_ORDER`
+`AVAILABLE` · `RESERVED` · `OCCUPIED` · `CLEANING` · `DIRTY` · `MAINTENANCE` · `OUT_OF_SERVICE`
 
 ### ReservationStatus
-`PENDING` · `CONFIRMED` · `CHECKED_IN` · `CHECKED_OUT` · `CANCELLED` · `NO_SHOW`
+`PENDING` · `CONFIRMED` · `CHECKED_IN` · `COMPLETED` · `CANCELLED` · `NO_SHOW`
 
 ### ReservationSource
 `WALK_IN` · `PHONE` · `WEBSITE` · `OTA_BOOKING` · `AGENT`
@@ -404,10 +506,19 @@ hotels
 `ROOM_RATE` · `FNB` · `MINIBAR` · `LAUNDRY` · `TAX` · `SERVICE_CHARGE` · `MISC`
 
 ### PaymentMethod
-`CASH` · `CREDIT_CARD` · `DEBIT_CARD` · `BANK_TRANSFER` · `MPESA` · `VOUCHER`
+`CASH` · `CREDIT_CARD` · `DEBIT_CARD` · `BANK_TRANSFER` · `TELEBIRR` · `CBE_BIRR` · `VOUCHER`
 
 ### PaymentStatus
 `PENDING` · `COMPLETED` · `FAILED` · `REFUNDED`
+
+### RefundStatus
+`PENDING` · `COMPLETED` · `FAILED`
+
+### ServiceOrderStatus
+`PENDING` · `IN_PROGRESS` · `COMPLETED` · `CANCELLED`
+
+### MaintenanceStatus
+`REPORTED` · `IN_PROGRESS` · `RESOLVED` · `CANCELLED`
 
 ### FolioStatus
 `OPEN` · `CLOSED`
@@ -421,10 +532,17 @@ hotels
 
 | Table              | Index                              | Reason                                      |
 |--------------------|------------------------------------|---------------------------------------------|
-| rooms              | hotel_id, status, room_type_id     | Room rack and availability queries          |
+| floors             | hotel_id, (hotel_id, floor_number) unique | Floor lookup and uniqueness         |
+| rooms              | hotel_id, status, room_type_id, floor_id | Room rack and availability queries   |
 | reservations       | hotel_id, status, check_in_date+check_out_date | Dashboard, arrivals, departures  |
 | guests             | email (unique), phone, id_number   | Fast guest lookup                           |
+| folios             | reservation_id                     | Folio lookup by reservation                 |
 | folio_charges      | folio_id, charge_type, posted_at   | Folio summary aggregations                  |
+| payments           | folio_id                           | Payment lookup by folio                     |
+| refunds            | payment_id, folio_id, processed_by | Refund history and audit trail              |
+| services           | hotel_id, category                 | Service menu queries                        |
+| service_orders     | reservation_id, folio_id, service_id, ordered_by | Service tracking and billing |
 | housekeeping_tasks | room_id, assigned_to, status, scheduled_date | Daily board and staff views        |
+| maintenance_reports| room_id, reported_by, status       | Maintenance triage and room work orders     |
 | audit_logs         | user_id, entity_type+entity_id, created_at | Compliance queries               |
 | night_audit_logs   | (hotel_id, audit_date) unique      | Prevent duplicate audits per day            |

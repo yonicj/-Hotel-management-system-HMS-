@@ -1,4 +1,4 @@
-export type RoomStatus = 'AVAILABLE' | 'OCCUPIED' | 'RESERVED' | 'DIRTY' | 'CLEANING' | 'MAINTENANCE' | 'OUT_OF_ORDER';
+export type RoomStatus = 'AVAILABLE' | 'RESERVED' | 'OCCUPIED' | 'CLEANING' | 'DIRTY' | 'MAINTENANCE' | 'OUT_OF_SERVICE';
 
 export interface RoomType {
   id: string;

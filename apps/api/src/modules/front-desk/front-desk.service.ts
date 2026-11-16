@@ -72,7 +72,7 @@ export async function checkOut(reservationId: string, userId: string) {
   const updated = await prisma.$transaction(async (tx) => {
     const res = await tx.reservation.update({
       where: { id: reservationId },
-      data: { status: 'CHECKED_OUT', actualCheckOut: new Date() },
+      data: { status: 'COMPLETED', actualCheckOut: new Date() },
     });
     await tx.room.update({ where: { id: reservation.roomId! }, data: { status: 'DIRTY' } });
     if (openFolio) {
@@ -138,6 +138,7 @@ export async function getRoomRack(hotelId: string) {
     where: { hotelId },
     include: {
       roomType: true,
+      floor: true,
       reservations: {
         where: { status: { in: ['CONFIRMED', 'CHECKED_IN', 'PENDING'] } },
         include: {
@@ -146,6 +147,6 @@ export async function getRoomRack(hotelId: string) {
         take: 1,
       },
     },
-    orderBy: [{ floor: 'asc' }, { roomNumber: 'asc' }],
+    orderBy: [{ floor: { floorNumber: 'asc' } }, { roomNumber: 'asc' }],
   });
 }

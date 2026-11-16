@@ -4,6 +4,6 @@ export interface ReservationItem {
   roomNumber: string;
   checkInDate: string;
   checkOutDate: string;
-  status: 'CONFIRMED' | 'CHECKED_IN' | 'CHECKED_OUT' | 'CANCELLED';
+  status: 'CONFIRMED' | 'CHECKED_IN' | 'COMPLETED' | 'CANCELLED';
   totalPrice: number;
 }
