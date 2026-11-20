@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { PERMISSIONS } from '@ehms/config';
 import * as ctrl from './users.controller';
 import { authenticate } from '../../shared/middleware/authenticate';
 import { authorize } from '../../shared/middleware/authorize';
@@ -8,10 +9,10 @@ import { createUserSchema, updateUserSchema } from './users.schema';
 const router = Router();
 router.use(authenticate);
 
-router.get('/', authorize('users', 'read'), ctrl.getUsers);
-router.get('/:id', authorize('users', 'read'), ctrl.getUserById);
-router.post('/', authorize('users', 'create'), validate(createUserSchema), ctrl.createUser);
-router.put('/:id', authorize('users', 'update'), validate(updateUserSchema), ctrl.updateUser);
-router.delete('/:id', authorize('users', 'delete'), ctrl.deleteUser);
+router.get('/', authorize(PERMISSIONS.USERS_READ), ctrl.getUsers);
+router.get('/:id', authorize(PERMISSIONS.USERS_READ), ctrl.getUserById);
+router.post('/', authorize(PERMISSIONS.USERS_CREATE), validate(createUserSchema), ctrl.createUser);
+router.put('/:id', authorize(PERMISSIONS.USERS_UPDATE), validate(updateUserSchema), ctrl.updateUser);
+router.delete('/:id', authorize(PERMISSIONS.USERS_DELETE), ctrl.deleteUser);
 
 export default router;

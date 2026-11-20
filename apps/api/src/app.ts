@@ -11,10 +11,14 @@ import { env } from './config/env';
 import { initSocket } from './config/socket';
 import { errorHandler } from './shared/middleware/error-handler';
 import { rateLimiter } from './shared/middleware/rate-limiter';
+import { auditMiddleware } from './shared/middleware/audit';
 
 // ─── Route Imports ───────────────────────────────────────────────────────────
 import authRoutes from './modules/auth/auth.routes';
 import userRoutes from './modules/users/users.routes';
+import roleRoutes from './modules/roles/roles.routes';
+import hotelRoutes from './modules/hotels/hotels.routes';
+import floorRoutes from './modules/floors/floors.routes';
 import guestRoutes from './modules/guests/guests.routes';
 import roomRoutes from './modules/rooms/rooms.routes';
 import roomTypeRoutes from './modules/room-types/room-types.routes';
@@ -22,9 +26,11 @@ import ratePlanRoutes from './modules/rate-plans/rate-plans.routes';
 import reservationRoutes from './modules/reservations/reservations.routes';
 import frontDeskRoutes from './modules/front-desk/front-desk.routes';
 import housekeepingRoutes from './modules/housekeeping/housekeeping.routes';
+import maintenanceRoutes from './modules/maintenance/maintenance.routes';
 import billingRoutes from './modules/billing/billing.routes';
 import nightAuditRoutes from './modules/night-audit/night-audit.routes';
 import reportRoutes from './modules/reports/reports.routes';
+import auditLogRoutes from './modules/audit-log/audit-log.routes';
 
 const app = express();
 const httpServer = createServer(app);
@@ -46,6 +52,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
 app.use(rateLimiter);
+app.use(auditMiddleware);
 
 // ─── Health Check ────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => {
@@ -56,6 +63,9 @@ app.get('/health', (_req, res) => {
 const API = '/api';
 app.use(`${API}/auth`, authRoutes);
 app.use(`${API}/users`, userRoutes);
+app.use(`${API}/roles`, roleRoutes);
+app.use(`${API}/hotels`, hotelRoutes);
+app.use(`${API}/floors`, floorRoutes);
 app.use(`${API}/guests`, guestRoutes);
 app.use(`${API}/rooms`, roomRoutes);
 app.use(`${API}/room-types`, roomTypeRoutes);
@@ -63,17 +73,22 @@ app.use(`${API}/rate-plans`, ratePlanRoutes);
 app.use(`${API}/reservations`, reservationRoutes);
 app.use(`${API}/front-desk`, frontDeskRoutes);
 app.use(`${API}/housekeeping`, housekeepingRoutes);
+app.use(`${API}/maintenance`, maintenanceRoutes);
 app.use(`${API}/billing`, billingRoutes);
 app.use(`${API}/night-audit`, nightAuditRoutes);
 app.use(`${API}/reports`, reportRoutes);
+app.use(`${API}/audit-log`, auditLogRoutes);
+app.use(`${API}/audit-logs`, auditLogRoutes);
 
 // ─── Global Error Handler ─────────────────────────────────────────────────────
 app.use(errorHandler);
 
 // ─── Start Server ─────────────────────────────────────────────────────────────
-httpServer.listen(env.PORT, () => {
-  console.log(`🚀 HMS API running on http://localhost:${env.PORT}`);
-  console.log(`   Health: http://localhost:${env.PORT}/health`);
-});
+if (process.env.NODE_ENV !== 'test') {
+  httpServer.listen(env.PORT, () => {
+    console.log(`🚀 HMS API running on http://localhost:${env.PORT}`);
+    console.log(`   Health: http://localhost:${env.PORT}/health`);
+  });
+}
 
 export default app;

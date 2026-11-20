@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { PERMISSIONS, ROLES, splitPermission } from '@ehms/config';
 
 const prisma = new PrismaClient();
 
@@ -23,131 +24,198 @@ async function main() {
   });
   console.log(`✅ Hotel: ${hotel.name}`);
 
-  // ─── Roles ────────────────────────────────────────────────────────────────
-  const roleNames = ['admin', 'manager', 'receptionist', 'housekeeping', 'accountant'];
-  const roles: Record<string, any> = {};
+  // ─── Six SRS Roles ────────────────────────────────────────────────────────
+  const srsRoles = [
+    {
+      name: ROLES.SUPER_ADMIN,
+      description: 'Complete system access, tenant management, user lifecycle, and role assignment',
+    },
+    {
+      name: ROLES.HOTEL_MANAGER,
+      description: 'Operations oversight, manager overrides, financial approvals, voiding/cancellations, report generation',
+    },
+    {
+      name: ROLES.RECEPTIONIST,
+      description: 'Front desk operations, reservation lifecycle, guest profiles, check-in, check-out, and folio posting',
+    },
+    {
+      name: ROLES.HOUSEKEEPER,
+      description: 'Housekeeping room rack, task status updates, and maintenance requests',
+    },
+    {
+      name: ROLES.ACCOUNTANT,
+      description: 'Full billing and folio access, payment reconciliation, night audit review, and tax/fiscal reporting',
+    },
+    {
+      name: ROLES.GENERAL_STAFF,
+      description: 'Restricted operations, POS cashiering, and room service order posting',
+    },
+  ];
 
-  for (const name of roleNames) {
+  const roles: Record<string, any> = {};
+  for (const r of srsRoles) {
     const role = await prisma.role.upsert({
-      where: { name },
-      update: {},
-      create: { name, description: `${name} role` },
+      where: { name: r.name },
+      update: { description: r.description },
+      create: { name: r.name, description: r.description },
     });
-    roles[name] = role;
+    roles[r.name] = role;
   }
-  console.log(`✅ Roles: ${roleNames.join(', ')}`);
+  console.log(`✅ Roles: ${srsRoles.map((r) => r.name).join(', ')}`);
 
   // ─── Permissions ──────────────────────────────────────────────────────────
-  const resources = [
-    'users', 'guests', 'rooms', 'room_types', 'rate_plans',
-    'reservations', 'front_desk', 'housekeeping', 'billing',
-    'night_audit', 'reports',
-  ];
-  const actions = ['create', 'read', 'update', 'delete'];
-
-  // Create all permissions
   const allPermissions: Record<string, any> = {};
-  for (const resource of resources) {
-    for (const action of actions) {
-      const perm = await prisma.permission.upsert({
-        where: { resource_action: { resource, action } },
-        update: {},
-        create: { resource, action },
-      });
-      allPermissions[`${resource}:${action}`] = perm;
-    }
+  for (const permValue of Object.values(PERMISSIONS)) {
+    const { resource, action } = splitPermission(permValue);
+    const perm = await prisma.permission.upsert({
+      where: { resource_action: { resource, action } },
+      update: {},
+      create: { resource, action },
+    });
+    allPermissions[permValue] = perm;
   }
-  console.log('✅ Permissions created');
+  console.log(`✅ Permissions created (${Object.keys(allPermissions).length} canonical permissions)`);
 
   // ─── Role → Permission Matrix ─────────────────────────────────────────────
-  // Admin gets everything
+  // Clear any existing role permissions for these roles to ensure a clean, deterministic sync
+  await prisma.rolePermission.deleteMany({
+    where: {
+      roleId: { in: Object.values(roles).map((r) => r.id) },
+    },
+  });
+
+  // 1. Super Admin: full system access (all permissions)
   for (const perm of Object.values(allPermissions)) {
-    await prisma.rolePermission.upsert({
-      where: { roleId_permissionId: { roleId: roles.admin.id, permissionId: perm.id } },
-      update: {},
-      create: { roleId: roles.admin.id, permissionId: perm.id },
+    await prisma.rolePermission.create({
+      data: { roleId: roles[ROLES.SUPER_ADMIN].id, permissionId: perm.id },
     });
   }
 
-  // Manager: all except users:delete
-  const managerPerms = Object.entries(allPermissions)
-    .filter(([key]) => key !== 'users:delete')
-    .map(([, v]) => v);
-  for (const perm of managerPerms) {
-    await prisma.rolePermission.upsert({
-      where: { roleId_permissionId: { roleId: roles.manager.id, permissionId: perm.id } },
-      update: {},
-      create: { roleId: roles.manager.id, permissionId: perm.id },
-    });
-  }
-
-  // Receptionist: guests, reservations, front_desk, billing (read/create/update)
-  const receptionistKeys = [
-    'guests:read', 'guests:create', 'guests:update',
-    'rooms:read',
-    'room_types:read',
-    'rate_plans:read',
-    'reservations:read', 'reservations:create', 'reservations:update',
-    'front_desk:read', 'front_desk:update',
-    'billing:read', 'billing:create', 'billing:update',
-  ];
-  for (const key of receptionistKeys) {
-    const perm = allPermissions[key];
+  // 2. Hotel Manager: all permissions except users:delete and billing:delete
+  const managerPerms = Object.values(PERMISSIONS).filter(
+    (p) => p !== PERMISSIONS.USERS_DELETE && p !== PERMISSIONS.BILLING_DELETE
+  );
+  for (const permKey of managerPerms) {
+    const perm = allPermissions[permKey];
     if (!perm) continue;
-    await prisma.rolePermission.upsert({
-      where: { roleId_permissionId: { roleId: roles.receptionist.id, permissionId: perm.id } },
-      update: {},
-      create: { roleId: roles.receptionist.id, permissionId: perm.id },
+    await prisma.rolePermission.create({
+      data: { roleId: roles[ROLES.HOTEL_MANAGER].id, permissionId: perm.id },
     });
   }
 
-  // Housekeeping: rooms read/update, housekeeping all
-  const housekeepingKeys = [
-    'rooms:read', 'rooms:update',
-    'housekeeping:read', 'housekeeping:create', 'housekeeping:update',
+  // 3. Receptionist: guests, reservations, front_desk, rooms/room_types/rates (read), floors/hotels (read), billing (read/create/update)
+  const receptionistPerms = [
+    PERMISSIONS.GUESTS_READ,
+    PERMISSIONS.GUESTS_CREATE,
+    PERMISSIONS.GUESTS_UPDATE,
+    PERMISSIONS.ROOMS_READ,
+    PERMISSIONS.ROOM_TYPES_READ,
+    PERMISSIONS.RATE_PLANS_READ,
+    PERMISSIONS.FLOORS_READ,
+    PERMISSIONS.HOTELS_READ,
+    PERMISSIONS.RESERVATIONS_READ,
+    PERMISSIONS.RESERVATIONS_CREATE,
+    PERMISSIONS.RESERVATIONS_UPDATE,
+    PERMISSIONS.FRONT_DESK_READ,
+    PERMISSIONS.FRONT_DESK_UPDATE,
+    PERMISSIONS.BILLING_READ,
+    PERMISSIONS.BILLING_CREATE,
+    PERMISSIONS.BILLING_UPDATE,
   ];
-  for (const key of housekeepingKeys) {
-    const perm = allPermissions[key];
+  for (const permKey of receptionistPerms) {
+    const perm = allPermissions[permKey];
     if (!perm) continue;
-    await prisma.rolePermission.upsert({
-      where: { roleId_permissionId: { roleId: roles.housekeeping.id, permissionId: perm.id } },
-      update: {},
-      create: { roleId: roles.housekeeping.id, permissionId: perm.id },
+    await prisma.rolePermission.create({
+      data: { roleId: roles[ROLES.RECEPTIONIST].id, permissionId: perm.id },
     });
   }
 
-  // Accountant: billing all, reports read, night_audit all
-  const accountantKeys = [
-    'billing:read', 'billing:create', 'billing:update', 'billing:delete',
-    'reports:read',
-    'night_audit:read', 'night_audit:create',
+  // 4. Housekeeper: rooms read/update, housekeeping read/create/update, maintenance read/create/update
+  const housekeeperPerms = [
+    PERMISSIONS.ROOMS_READ,
+    PERMISSIONS.ROOMS_UPDATE,
+    PERMISSIONS.HOUSEKEEPING_READ,
+    PERMISSIONS.HOUSEKEEPING_CREATE,
+    PERMISSIONS.HOUSEKEEPING_UPDATE,
+    PERMISSIONS.MAINTENANCE_READ,
+    PERMISSIONS.MAINTENANCE_CREATE,
+    PERMISSIONS.MAINTENANCE_UPDATE,
   ];
-  for (const key of accountantKeys) {
-    const perm = allPermissions[key];
+  for (const permKey of housekeeperPerms) {
+    const perm = allPermissions[permKey];
     if (!perm) continue;
-    await prisma.rolePermission.upsert({
-      where: { roleId_permissionId: { roleId: roles.accountant.id, permissionId: perm.id } },
-      update: {},
-      create: { roleId: roles.accountant.id, permissionId: perm.id },
+    await prisma.rolePermission.create({
+      data: { roleId: roles[ROLES.HOUSEKEEPER].id, permissionId: perm.id },
     });
   }
-  console.log('✅ Role permissions assigned');
+
+  // 5. Accountant: billing read/create/update (NO billing:delete or destructive delete rights), reports read, night audit read/create, reservations/guests read, audit log read
+  const accountantPerms = [
+    PERMISSIONS.BILLING_READ,
+    PERMISSIONS.BILLING_CREATE,
+    PERMISSIONS.BILLING_UPDATE,
+    PERMISSIONS.REPORTS_READ,
+    PERMISSIONS.NIGHT_AUDIT_READ,
+    PERMISSIONS.NIGHT_AUDIT_CREATE,
+    PERMISSIONS.RESERVATIONS_READ,
+    PERMISSIONS.GUESTS_READ,
+    PERMISSIONS.AUDIT_LOG_READ,
+  ];
+  for (const permKey of accountantPerms) {
+    const perm = allPermissions[permKey];
+    if (!perm) continue;
+    await prisma.rolePermission.create({
+      data: { roleId: roles[ROLES.ACCOUNTANT].id, permissionId: perm.id },
+    });
+  }
+
+  // 6. General Staff: restricted operations (read rooms, room types, post charges/orders)
+  const generalStaffPerms = [
+    PERMISSIONS.ROOMS_READ,
+    PERMISSIONS.ROOM_TYPES_READ,
+    PERMISSIONS.BILLING_READ,
+    PERMISSIONS.BILLING_CREATE,
+  ];
+  for (const permKey of generalStaffPerms) {
+    const perm = allPermissions[permKey];
+    if (!perm) continue;
+    await prisma.rolePermission.create({
+      data: { roleId: roles[ROLES.GENERAL_STAFF].id, permissionId: perm.id },
+    });
+  }
+
+  console.log('✅ Role permissions assigned (Accountant delete rights strictly revoked)');
 
   // ─── Admin User ───────────────────────────────────────────────────────────
   const passwordHash = await bcrypt.hash('Admin@1234', 12);
   const adminUser = await prisma.user.upsert({
     where: { email: 'admin@grandhotel.com' },
-    update: {},
+    update: {
+      roleId: roles[ROLES.SUPER_ADMIN].id,
+    },
     create: {
       hotelId: hotel.id,
       firstName: 'System',
       lastName: 'Admin',
       email: 'admin@grandhotel.com',
       passwordHash,
-      roleId: roles.admin.id,
+      roleId: roles[ROLES.SUPER_ADMIN].id,
     },
   });
-  console.log(`✅ Admin user: ${adminUser.email} / Admin@1234`);
+  console.log(`✅ Admin user: ${adminUser.email} / Admin@1234 (Role: ${ROLES.SUPER_ADMIN})`);
+
+  // Clean up any legacy roles not in the 6 SRS roles
+  try {
+    const validRoleNames = srsRoles.map((r) => r.name);
+    await prisma.rolePermission.deleteMany({
+      where: { role: { name: { notIn: validRoleNames } } },
+    });
+    await prisma.role.deleteMany({
+      where: { name: { notIn: validRoleNames } },
+    });
+  } catch {
+    // Non-fatal if foreign keys prevent deletion
+  }
 
   // ─── Room Types ───────────────────────────────────────────────────────────
   const roomTypes = [

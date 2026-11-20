@@ -12,5 +12,8 @@
   },
   "devDependencies": {
     "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "decimal.js": "^10.6.0"
   }
 }

@@ -1,11 +1,23 @@
 import { prisma } from '../../config/database';
 import { AppError } from '../../shared/utils/app-error';
-import { generateConfirmationNumber, parsePaginationParams, buildPaginationMeta, getSkip } from '@ehms/utils';
+import { ErrorCode } from '@ehms/types';
+import {
+  generateConfirmationNumber,
+  parsePaginationParams,
+  buildPaginationMeta,
+  getSkip,
+  Decimal,
+  roundMoney,
+} from '@ehms/utils';
+import { recordAuditLog, AUDIT_ACTIONS } from '../../shared/utils/audit';
 import { computeRate } from '../rate-plans/rate-plans.service';
 import { CreateReservationInput } from './reservations.schema';
 
 export async function getReservations(
-  hotelId: string, filters: Record<string, string>, rawPage: unknown, rawLimit: unknown
+  hotelId: string,
+  filters: Record<string, string>,
+  rawPage: unknown,
+  rawLimit: unknown
 ) {
   const { page, limit } = parsePaginationParams(rawPage, rawLimit);
   const skip = getSkip(page, limit);
@@ -46,19 +58,30 @@ export async function getReservationById(id: string) {
       folios: true,
     },
   });
-  if (!r) throw new AppError('Reservation not found', 404);
+  if (!r) throw new AppError('Reservation not found', 404, ErrorCode.NOT_FOUND);
   return r;
 }
 
 export async function createReservation(
-  hotelId: string, input: CreateReservationInput, createdBy: string
+  hotelId: string,
+  input: CreateReservationInput,
+  createdBy: string
 ) {
   const { nights, totalAmount } = await computeRate(
-    input.roomTypeId, input.checkInDate, input.checkOutDate
+    input.roomTypeId,
+    input.checkInDate,
+    input.checkOutDate
   );
-  if (nights <= 0) throw new AppError('Check-out date must be after check-in date', 400);
+  if (nights <= 0) {
+    throw new AppError(
+      'Check-out date must be after check-in date',
+      400,
+      ErrorCode.VALIDATION_ERROR
+    );
+  }
 
   const confirmationNumber = generateConfirmationNumber();
+  const totalAmountDecimal = roundMoney(new Decimal(totalAmount));
 
   const reservation = await prisma.$transaction(async (tx) => {
     const res = await tx.reservation.create({
@@ -74,7 +97,7 @@ export async function createReservation(
         children: input.children ?? 0,
         source: (input.source as any) ?? 'WALK_IN',
         specialRequests: input.specialRequests,
-        totalAmount,
+        totalAmount: totalAmountDecimal,
         createdBy,
         status: 'PENDING',
       },
@@ -92,27 +115,116 @@ export async function createReservation(
       },
     });
 
+    await recordAuditLog({
+      userId: createdBy,
+      action: AUDIT_ACTIONS.RESERVATION_CREATED,
+      entityType: 'Reservation',
+      entityId: res.id,
+      changes: {
+        before: null,
+        after: {
+          confirmationNumber: res.confirmationNumber,
+          status: 'PENDING',
+          roomTypeId: input.roomTypeId,
+          roomId: input.roomId,
+          checkInDate: input.checkInDate,
+          checkOutDate: input.checkOutDate,
+          totalAmount: totalAmountDecimal.toString(),
+        },
+      },
+      tx,
+    });
+
     return res;
   });
 
   return getReservationById(reservation.id);
 }
 
-export async function confirmReservation(id: string) {
+export async function confirmReservation(id: string, userId?: string) {
   const r = await getReservationById(id);
-  if (r.status !== 'PENDING') throw new AppError('Only pending reservations can be confirmed', 400);
-  return prisma.reservation.update({ where: { id }, data: { status: 'CONFIRMED' } });
+  if (r.status !== 'PENDING') {
+    throw new AppError('Only pending reservations can be confirmed', 400, ErrorCode.BAD_REQUEST);
+  }
+  const resolvedUserId = userId || r.createdBy;
+
+  return prisma.$transaction(async (tx) => {
+    const updated = await tx.reservation.update({
+      where: { id },
+      data: { status: 'CONFIRMED' },
+    });
+
+    await recordAuditLog({
+      userId: resolvedUserId,
+      action: AUDIT_ACTIONS.RESERVATION_CONFIRMED,
+      entityType: 'Reservation',
+      entityId: id,
+      changes: {
+        before: { status: r.status },
+        after: { status: 'CONFIRMED' },
+      },
+      tx,
+    });
+
+    return updated;
+  });
 }
 
-export async function cancelReservation(id: string) {
+export async function cancelReservation(id: string, userId?: string) {
   const r = await getReservationById(id);
   if (['CHECKED_IN', 'COMPLETED'].includes(r.status)) {
-    throw new AppError('Cannot cancel an active or completed reservation', 400);
+    throw new AppError(
+      'Cannot cancel an active or completed reservation',
+      400,
+      ErrorCode.BAD_REQUEST
+    );
   }
-  return prisma.reservation.update({ where: { id }, data: { status: 'CANCELLED' } });
+  const resolvedUserId = userId || r.createdBy;
+
+  return prisma.$transaction(async (tx) => {
+    const updated = await tx.reservation.update({
+      where: { id },
+      data: { status: 'CANCELLED' },
+    });
+
+    await recordAuditLog({
+      userId: resolvedUserId,
+      action: AUDIT_ACTIONS.RESERVATION_CANCELLED,
+      entityType: 'Reservation',
+      entityId: id,
+      changes: {
+        before: { status: r.status },
+        after: { status: 'CANCELLED' },
+      },
+      tx,
+    });
+
+    return updated;
+  });
 }
 
-export async function assignRoom(reservationId: string, roomId: string) {
-  await getReservationById(reservationId);
-  return prisma.reservation.update({ where: { id: reservationId }, data: { roomId } });
+export async function assignRoom(reservationId: string, roomId: string, userId?: string) {
+  const r = await getReservationById(reservationId);
+  const resolvedUserId = userId || r.createdBy;
+
+  return prisma.$transaction(async (tx) => {
+    const updated = await tx.reservation.update({
+      where: { id: reservationId },
+      data: { roomId },
+    });
+
+    await recordAuditLog({
+      userId: resolvedUserId,
+      action: AUDIT_ACTIONS.ROOM_ASSIGNED,
+      entityType: 'Reservation',
+      entityId: reservationId,
+      changes: {
+        before: { roomId: r.roomId },
+        after: { roomId },
+      },
+      tx,
+    });
+
+    return updated;
+  });
 }

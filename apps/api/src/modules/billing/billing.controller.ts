@@ -15,7 +15,7 @@ export async function addPayment(req: Request, res: Response, next: NextFunction
   try { sendCreated(res, await service.addPayment(req.params.id, req.body, req.user!.userId), 'Payment recorded'); } catch (e) { next(e); }
 }
 export async function closeFolio(req: Request, res: Response, next: NextFunction) {
-  try { sendSuccess(res, await service.closeFolio(req.params.id), 'Folio closed'); } catch (e) { next(e); }
+  try { sendSuccess(res, await service.closeFolio(req.params.id, req.user!.userId), 'Folio closed'); } catch (e) { next(e); }
 }
 export async function getInvoice(req: Request, res: Response, next: NextFunction) {
   try { sendSuccess(res, await service.getInvoice(req.params.id)); } catch (e) { next(e); }

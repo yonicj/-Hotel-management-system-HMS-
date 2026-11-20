@@ -1,5 +1,8 @@
 import { prisma } from '../../config/database';
 import { AppError } from '../../shared/utils/app-error';
+import { ErrorCode } from '@ehms/types';
+import { Decimal, roundMoney } from '@ehms/utils';
+import { recordAuditLog, AUDIT_ACTIONS } from '../../shared/utils/audit';
 import { emitReservationCheckedIn, emitReservationCheckedOut } from '../../shared/events/reservation.events';
 import { emitRoomStatusUpdated } from '../../shared/events/room-status.events';
 
@@ -24,6 +27,32 @@ export async function checkIn(reservationId: string, userId: string) {
       data: { status: 'CHECKED_IN', actualCheckIn: new Date() },
     });
     await tx.room.update({ where: { id: reservation.roomId! }, data: { status: 'OCCUPIED' } });
+
+    await recordAuditLog({
+      userId,
+      action: AUDIT_ACTIONS.CHECK_IN,
+      entityType: 'Reservation',
+      entityId: reservationId,
+      changes: {
+        before: { status: reservation.status, actualCheckIn: null },
+        after: { status: 'CHECKED_IN', actualCheckIn: res.actualCheckIn },
+      },
+      tx,
+    });
+
+    await recordAuditLog({
+      userId,
+      action: AUDIT_ACTIONS.ROOM_STATUS_UPDATED,
+      entityType: 'Room',
+      entityId: reservation.roomId!,
+      changes: {
+        before: { status: reservation.room?.status ?? 'AVAILABLE' },
+        after: { status: 'OCCUPIED' },
+        reason: 'Guest check-in',
+      },
+      tx,
+    });
+
     return res;
   });
 
@@ -57,14 +86,23 @@ export async function checkOut(reservationId: string, userId: string) {
 
   const openFolio = reservation.folios.find((f) => f.status === 'OPEN');
   if (openFolio) {
-    const totalCharges = openFolio.charges.reduce((sum, c) => sum + Number(c.amount), 0);
+    const totalCharges = openFolio.charges.reduce(
+      (sum, c) => sum.plus(new Decimal(c.amount.toString())),
+      new Decimal(0)
+    );
     const totalPayments = openFolio.payments
       .filter((p) => p.status === 'COMPLETED')
-      .reduce((sum, p) => sum + Number(p.amount), 0);
-    if (totalPayments < totalCharges) {
+      .reduce(
+        (sum, p) => sum.plus(new Decimal(p.amount.toString())),
+        new Decimal(0)
+      );
+    const balance = totalCharges.minus(totalPayments);
+    if (balance.greaterThan(0)) {
       throw new AppError(
-        `Outstanding balance: ${(totalCharges - totalPayments).toFixed(2)}. Please settle the folio before check-out.`,
-        400
+        `Outstanding balance: ${balance.toFixed(2)}. Please settle the folio before check-out.`,
+        400,
+        ErrorCode.BALANCE_DUE,
+        { balance: roundMoney(balance) }
       );
     }
   }
@@ -78,6 +116,47 @@ export async function checkOut(reservationId: string, userId: string) {
     if (openFolio) {
       await tx.folio.update({ where: { id: openFolio.id }, data: { status: 'CLOSED' } });
     }
+
+    await recordAuditLog({
+      userId,
+      action: AUDIT_ACTIONS.CHECK_OUT,
+      entityType: 'Reservation',
+      entityId: reservationId,
+      changes: {
+        before: { status: reservation.status, actualCheckOut: null },
+        after: { status: 'COMPLETED', actualCheckOut: res.actualCheckOut },
+      },
+      tx,
+    });
+
+    await recordAuditLog({
+      userId,
+      action: AUDIT_ACTIONS.ROOM_STATUS_UPDATED,
+      entityType: 'Room',
+      entityId: reservation.roomId!,
+      changes: {
+        before: { status: reservation.room?.status ?? 'OCCUPIED' },
+        after: { status: 'DIRTY' },
+        reason: 'Guest check-out',
+      },
+      tx,
+    });
+
+    if (openFolio) {
+      await recordAuditLog({
+        userId,
+        action: AUDIT_ACTIONS.FOLIO_CLOSED,
+        entityType: 'Folio',
+        entityId: openFolio.id,
+        changes: {
+          before: { status: openFolio.status },
+          after: { status: 'CLOSED' },
+          reason: 'Check-out folio closure',
+        },
+        tx,
+      });
+    }
+
     return res;
   });
 

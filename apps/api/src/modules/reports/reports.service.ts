@@ -1,9 +1,12 @@
 import { prisma } from '../../config/database';
+import { Decimal, roundMoney } from '@ehms/utils';
 
-export async function getOccupancyReport(hotelId: string, from: string, to: string) {
+export async function getOccupancyReport(hotelId: string, from?: string, to?: string) {
   const totalRooms = await prisma.room.count({ where: { hotelId } });
+  const startDate = from ? new Date(from) : new Date('2026-01-01');
+  const endDate = to ? new Date(to) : new Date('2026-12-31');
   const audits = await prisma.nightAuditLog.findMany({
-    where: { hotelId, auditDate: { gte: new Date(from), lte: new Date(to) }, status: 'COMPLETED' },
+    where: { hotelId, auditDate: { gte: startDate, lte: endDate }, status: 'COMPLETED' },
     orderBy: { auditDate: 'asc' },
   });
 
@@ -15,16 +18,24 @@ export async function getOccupancyReport(hotelId: string, from: string, to: stri
   }));
 }
 
-export async function getRevenueReport(hotelId: string, from: string, to: string) {
+export async function getRevenueReport(hotelId: string, from?: string, to?: string) {
+  const startDate = from ? new Date(from) : new Date('2026-01-01');
+  const endDate = to ? new Date(to) : new Date('2026-12-31');
   const audits = await prisma.nightAuditLog.findMany({
-    where: { hotelId, auditDate: { gte: new Date(from), lte: new Date(to) }, status: 'COMPLETED' },
+    where: { hotelId, auditDate: { gte: startDate, lte: endDate }, status: 'COMPLETED' },
     orderBy: { auditDate: 'asc' },
   });
 
-  const totalRevenue = audits.reduce((sum, a) => sum + Number(a.totalRevenue), 0);
+  const totalRevenue = audits.reduce(
+    (sum, a) => sum.plus(new Decimal(a.totalRevenue.toString())),
+    new Decimal(0)
+  );
   return {
-    totalRevenue,
-    breakdown: audits.map((a) => ({ date: a.auditDate, revenue: Number(a.totalRevenue) })),
+    totalRevenue: roundMoney(totalRevenue),
+    breakdown: audits.map((a) => ({
+      date: a.auditDate,
+      revenue: roundMoney(new Decimal(a.totalRevenue.toString())),
+    })),
   };
 }
 

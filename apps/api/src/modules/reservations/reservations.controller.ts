@@ -22,11 +22,17 @@ export async function createReservation(req: Request, res: Response, next: NextF
   } catch (e) { next(e); }
 }
 export async function confirmReservation(req: Request, res: Response, next: NextFunction) {
-  try { sendSuccess(res, await service.confirmReservation(req.params.id), 'Reservation confirmed'); } catch (e) { next(e); }
+  try {
+    sendSuccess(res, await service.confirmReservation(req.params.id, req.user!.userId), 'Reservation confirmed');
+  } catch (e) { next(e); }
 }
 export async function cancelReservation(req: Request, res: Response, next: NextFunction) {
-  try { sendSuccess(res, await service.cancelReservation(req.params.id), 'Reservation cancelled'); } catch (e) { next(e); }
+  try {
+    sendSuccess(res, await service.cancelReservation(req.params.id, req.user!.userId), 'Reservation cancelled');
+  } catch (e) { next(e); }
 }
 export async function assignRoom(req: Request, res: Response, next: NextFunction) {
-  try { sendSuccess(res, await service.assignRoom(req.params.id, req.body.roomId), 'Room assigned'); } catch (e) { next(e); }
+  try {
+    sendSuccess(res, await service.assignRoom(req.params.id, req.body.roomId, req.user!.userId), 'Room assigned');
+  } catch (e) { next(e); }
 }

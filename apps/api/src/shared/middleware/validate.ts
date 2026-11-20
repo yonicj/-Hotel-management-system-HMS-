@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodSchema, ZodError } from 'zod';
 import { AppError } from '../utils/app-error';
+import { ErrorCode } from '@ehms/types';
 
 type ValidateTarget = 'body' | 'query' | 'params';
 
@@ -18,12 +19,11 @@ export function validate(schema: ZodSchema, target: ValidateTarget = 'body') {
       if (err instanceof ZodError) {
         const errors: Record<string, string[]> = {};
         err.errors.forEach((e) => {
-          const key = e.path.join('.');
+          const key = e.path.join('.') || 'root';
           if (!errors[key]) errors[key] = [];
           errors[key].push(e.message);
         });
-        const appErr = new AppError('Validation failed', 400);
-        (appErr as any).errors = errors;
+        const appErr = new AppError('Validation failed', 400, ErrorCode.VALIDATION_ERROR, errors);
         next(appErr);
       } else {
         next(err);

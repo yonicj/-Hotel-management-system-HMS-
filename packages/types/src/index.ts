@@ -1,4 +1,5 @@
 export * from './enums';
+export * from './errors';
 export * from './auth';
 export * from './property';
 export * from './room';

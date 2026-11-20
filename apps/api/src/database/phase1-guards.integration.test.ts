@@ -17,8 +17,9 @@ async function cleanupTestData() {
     await prisma.$executeRawUnsafe(`DELETE FROM audit_logs WHERE action IN ('INT_TEST_AUDIT', 'ORIGINAL_AUDIT_ENTRY', 'TAMPERED', 'TAMPERED_ENTRY');`);
     await prisma.$executeRawUnsafe(`ALTER TABLE audit_logs ENABLE TRIGGER trg_audit_logs_append_only;`);
 
+    await prisma.$executeRawUnsafe(`DELETE FROM reservation_guests;`);
     await prisma.$executeRawUnsafe(`DELETE FROM folios WHERE folio_number LIKE 'FOL-%';`);
-    await prisma.$executeRawUnsafe(`DELETE FROM reservations WHERE confirmation_number LIKE 'CONF-%';`);
+    await prisma.$executeRawUnsafe(`DELETE FROM reservations WHERE confirmation_number LIKE 'CONF-%' OR id LIKE 'int-res-%';`);
     await prisma.$executeRawUnsafe(`DELETE FROM guests WHERE phone = '+251911999888';`);
   } catch (err: any) {
     // ignore
@@ -257,5 +258,10 @@ describe('Phase 1 Database Guarantees (PostgreSQL Enforced)', () => {
       expect(thrownError).not.toBeNull();
       expect(thrownError.message).toContain('Financial records cannot be deleted');
     });
+  });
+
+  afterAll(async () => {
+    await cleanupTestData();
+    await prisma.$disconnect();
   });
 });

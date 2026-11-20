@@ -18,7 +18,13 @@ export async function getRoomById(req: Request, res: Response, next: NextFunctio
 }
 
 export async function createRoom(req: Request, res: Response, next: NextFunction) {
-  try { sendCreated(res, await roomsService.createRoom(req.user!.hotelId, req.body), 'Room created'); } catch (err) { next(err); }
+  try {
+    sendCreated(
+      res,
+      await roomsService.createRoom(req.user!.hotelId, req.body, req.user!.userId),
+      'Room created'
+    );
+  } catch (err) { next(err); }
 }
 
 export async function updateRoomStatus(req: Request, res: Response, next: NextFunction) {

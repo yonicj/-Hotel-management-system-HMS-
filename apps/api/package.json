@@ -14,9 +14,11 @@
     "prisma:migrate:deploy": "prisma migrate deploy --schema=src/database/prisma/schema.prisma",
     "prisma:studio": "prisma studio --schema=src/database/prisma/schema.prisma",
     "prisma:seed": "ts-node --project tsconfig.json src/database/prisma/seed.ts",
-    "verify:guards": "ts-node --transpile-only --project tsconfig.json src/database/verify-phase1-guards.ts"
+    "verify:guards": "ts-node --transpile-only --project tsconfig.json src/database/verify-phase1-guards.ts",
+    "verify:rbac": "ts-node --transpile-only --project tsconfig.json src/database/verify-rbac.ts"
   },
   "dependencies": {
+    "@ehms/config": "workspace:*",
     "@ehms/types": "workspace:*",
     "@ehms/utils": "workspace:*",
     "@prisma/client": "^5.14.0",
@@ -24,6 +26,7 @@
     "compression": "^1.7.4",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
+    "decimal.js": "^10.6.0",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "express-rate-limit": "^7.3.1",
@@ -48,7 +51,9 @@
     "@types/jsonwebtoken": "^9.0.6",
     "@types/morgan": "^1.9.9",
     "@types/node": "^20.14.0",
+    "@types/supertest": "^7.2.1",
     "prisma": "^5.14.0",
+    "supertest": "^7.3.2",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.4.5"
