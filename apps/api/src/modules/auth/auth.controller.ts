@@ -57,7 +57,8 @@ export async function logoutController(req: Request, res: Response, next: NextFu
 
 export async function meController(req: Request, res: Response, next: NextFunction) {
   try {
-    sendSuccess(res, req.user, 'Current user');
+    const profile = await authService.getUserProfile(req.user!.userId);
+    sendSuccess(res, profile, 'Current user profile');
   } catch (err) {
     next(err);
   }

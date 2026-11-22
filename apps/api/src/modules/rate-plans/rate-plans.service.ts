@@ -5,7 +5,11 @@ import { calculateNights, Decimal, roundMoney } from '@ehms/utils';
 import { CreateRatePlanInput } from './rate-plans.schema';
 
 export async function getRatePlans(hotelId: string) {
-  return prisma.ratePlan.findMany({ where: { hotelId }, orderBy: { startDate: 'asc' } });
+  return prisma.ratePlan.findMany({
+    where: { hotelId },
+    include: { roomType: true },
+    orderBy: { startDate: 'asc' },
+  });
 }
 
 export async function createRatePlan(hotelId: string, input: CreateRatePlanInput) {
@@ -17,6 +21,7 @@ export async function createRatePlan(hotelId: string, input: CreateRatePlanInput
       startDate: new Date(input.startDate),
       endDate: new Date(input.endDate),
     } as any,
+    include: { roomType: true },
   });
 }
 
@@ -27,7 +32,17 @@ export async function updateRatePlan(id: string, input: Partial<CreateRatePlanIn
   if (input.rate !== undefined) {
     data.rate = roundMoney(new Decimal(input.rate));
   }
-  return prisma.ratePlan.update({ where: { id }, data });
+  if (input.startDate !== undefined) {
+    data.startDate = new Date(input.startDate);
+  }
+  if (input.endDate !== undefined) {
+    data.endDate = new Date(input.endDate);
+  }
+  return prisma.ratePlan.update({
+    where: { id },
+    data,
+    include: { roomType: true },
+  });
 }
 
 export async function computeRate(roomTypeId: string, checkIn: string, checkOut: string) {

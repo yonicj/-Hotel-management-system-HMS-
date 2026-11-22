@@ -1,13 +1,63 @@
 import { AxiosInstance } from 'axios';
-import { Room } from '@ehms/types';
+import { RoomTypeItem } from './room-types.api';
+import { FloorItem } from './floors.api';
+
+export type RoomStatus =
+  | 'AVAILABLE'
+  | 'RESERVED'
+  | 'OCCUPIED'
+  | 'CLEANING'
+  | 'DIRTY'
+  | 'MAINTENANCE'
+  | 'OUT_OF_SERVICE';
+
+export interface RoomItem {
+  id: string;
+  hotelId: string;
+  roomTypeId: string;
+  floorId: string;
+  roomNumber: string;
+  status: RoomStatus;
+  isSmoking: boolean;
+  notes?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  roomType?: RoomTypeItem;
+  floor?: FloorItem;
+}
+
+export interface CreateRoomInput {
+  roomTypeId: string;
+  floorId: string;
+  roomNumber: string;
+  isSmoking?: boolean;
+  notes?: string;
+}
+
+export interface UpdateRoomStatusInput {
+  status: RoomStatus;
+  notes?: string;
+}
 
 export const createRoomsApi = (client: AxiosInstance) => ({
-  getAll: async (): Promise<Room[]> => {
+  getAll: async (): Promise<RoomItem[]> => {
     const res = await client.get('/rooms');
-    return res.data;
+    return res.data?.data ?? res.data;
   },
-  updateStatus: async (id: string, status: string): Promise<Room> => {
-    const res = await client.patch(`/rooms/${id}/status`, { status });
-    return res.data;
+  getById: async (id: string): Promise<RoomItem> => {
+    const res = await client.get(`/rooms/${id}`);
+    return res.data?.data ?? res.data;
+  },
+  create: async (data: CreateRoomInput): Promise<RoomItem> => {
+    const res = await client.post('/rooms', data);
+    return res.data?.data ?? res.data;
+  },
+  updateStatus: async (id: string, status: RoomStatus | string, notes?: string): Promise<RoomItem> => {
+    const res = await client.put(`/rooms/${id}/status`, { status, notes });
+    return res.data?.data ?? res.data;
+  },
+  getAvailability: async (params: { check_in: string; check_out: string; room_type_id?: string }): Promise<RoomItem[]> => {
+    const res = await client.get('/rooms/availability', { params });
+    return res.data?.data ?? res.data;
   },
 });

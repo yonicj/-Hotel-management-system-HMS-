@@ -1,5 +1,6 @@
 import { prisma } from '../../config/database';
 import { AppError } from '../../shared/utils/app-error';
+import { ErrorCode } from '@ehms/types';
 import { emitRoomStatusUpdated } from '../../shared/events/room-status.events';
 import { recordAuditLog, AUDIT_ACTIONS } from '../../shared/utils/audit';
 import { CreateRoomInput, UpdateRoomStatusInput } from './rooms.schema';
@@ -43,6 +44,17 @@ export async function getRoomById(id: string) {
 
 export async function createRoom(hotelId: string, input: CreateRoomInput, createdBy?: string) {
   return prisma.$transaction(async (tx) => {
+    const existing = await tx.room.findFirst({
+      where: { hotelId, roomNumber: input.roomNumber },
+    });
+    if (existing) {
+      throw new AppError(
+        `Room number ${input.roomNumber} already exists in this hotel`,
+        409,
+        ErrorCode.CONFLICT
+      );
+    }
+
     const room = await tx.room.create({
       data: { ...input, hotelId } as any,
       include: { roomType: true, floor: true },

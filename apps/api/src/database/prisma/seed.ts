@@ -204,6 +204,50 @@ async function main() {
   });
   console.log(`✅ Admin user: ${adminUser.email} / Admin@1234 (Role: ${ROLES.SUPER_ADMIN})`);
 
+  // ─── Staff Users (for all SRS roles) ──────────────────────────────────────
+  const staffUsers = [
+    {
+      email: 'housekeeper@grandhotel.com',
+      firstName: 'Almaz',
+      lastName: 'Kebede',
+      role: ROLES.HOUSEKEEPER,
+    },
+    {
+      email: 'receptionist@grandhotel.com',
+      firstName: 'Tigist',
+      lastName: 'Haile',
+      role: ROLES.RECEPTIONIST,
+    },
+    {
+      email: 'accountant@grandhotel.com',
+      firstName: 'Dawit',
+      lastName: 'Tadesse',
+      role: ROLES.ACCOUNTANT,
+    },
+    {
+      email: 'manager@grandhotel.com',
+      firstName: 'Biniyam',
+      lastName: 'Alemu',
+      role: ROLES.HOTEL_MANAGER,
+    },
+  ];
+
+  for (const s of staffUsers) {
+    await prisma.user.upsert({
+      where: { email: s.email },
+      update: { roleId: roles[s.role].id },
+      create: {
+        hotelId: hotel.id,
+        firstName: s.firstName,
+        lastName: s.lastName,
+        email: s.email,
+        passwordHash,
+        roleId: roles[s.role].id,
+      },
+    });
+    console.log(`✅ Staff user: ${s.email} / Admin@1234 (Role: ${s.role})`);
+  }
+
   // Clean up any legacy roles not in the 6 SRS roles
   try {
     const validRoleNames = srsRoles.map((r) => r.name);

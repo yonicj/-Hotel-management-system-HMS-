@@ -6,13 +6,61 @@ import { redis } from '../../config/redis';
 import { env } from '../../config/env';
 import { AppError } from '../../shared/utils/app-error';
 import { ErrorCode } from '@ehms/types';
+import { PERMISSIONS } from '@ehms/config';
 import { recordAuditLog, AUDIT_ACTIONS } from '../../shared/utils/audit';
 import { LoginInput } from './auth.schema';
+
+export async function getUserProfile(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: {
+      role: {
+        include: {
+          rolePermissions: {
+            include: { permission: true },
+          },
+        },
+      },
+      hotel: true,
+    },
+  });
+
+  if (!user) {
+    throw new AppError('User not found', 404, ErrorCode.NOT_FOUND);
+  }
+
+  const permissions =
+    user.role?.name === 'Super Admin' || user.role?.name === 'SUPER_ADMIN'
+      ? Object.values(PERMISSIONS)
+      : (user.role?.rolePermissions || []).map(
+          (rp: any) => `${rp.permission.resource}:${rp.permission.action}`
+        );
+
+  return {
+    id: user.id,
+    email: user.email,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    hotelId: user.hotelId,
+    hotelName: user.hotel?.name || 'Grand HMS Hotel',
+    role: user.role.name,
+    permissions,
+  };
+}
 
 export async function login(input: LoginInput) {
   const user = await prisma.user.findUnique({
     where: { email: input.email },
-    include: { role: true },
+    include: {
+      role: {
+        include: {
+          rolePermissions: {
+            include: { permission: true },
+          },
+        },
+      },
+      hotel: true,
+    },
   });
 
   if (!user) {
@@ -82,6 +130,13 @@ export async function login(input: LoginInput) {
     },
   });
 
+  const permissions =
+    user.role?.name === 'Super Admin' || user.role?.name === 'SUPER_ADMIN'
+      ? Object.values(PERMISSIONS)
+      : (user.role?.rolePermissions || []).map(
+          (rp: any) => `${rp.permission.resource}:${rp.permission.action}`
+        );
+
   return {
     accessToken,
     refreshToken,
@@ -92,6 +147,8 @@ export async function login(input: LoginInput) {
       lastName: user.lastName,
       role: user.role.name,
       hotelId: user.hotelId,
+      hotelName: user.hotel?.name || 'Grand HMS Hotel',
+      permissions,
     },
   };
 }

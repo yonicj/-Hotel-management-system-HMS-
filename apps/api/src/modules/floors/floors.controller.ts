@@ -4,7 +4,8 @@ import { sendSuccess, sendCreated } from '../../shared/utils/response';
 
 export async function getFloors(req: Request, res: Response, next: NextFunction) {
   try {
-    sendSuccess(res, await service.getFloors(req.query.hotelId as string));
+    const hotelId = (req.query.hotelId as string) || req.user?.hotelId;
+    sendSuccess(res, await service.getFloors(hotelId));
   } catch (err) {
     next(err);
   }
@@ -20,7 +21,8 @@ export async function getFloorById(req: Request, res: Response, next: NextFuncti
 
 export async function createFloor(req: Request, res: Response, next: NextFunction) {
   try {
-    sendCreated(res, await service.createFloor(req.body), 'Floor created');
+    const hotelId = req.body.hotelId || req.user?.hotelId;
+    sendCreated(res, await service.createFloor({ ...req.body, hotelId }), 'Floor created');
   } catch (err) {
     next(err);
   }
