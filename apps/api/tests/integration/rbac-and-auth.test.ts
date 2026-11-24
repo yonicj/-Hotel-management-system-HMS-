@@ -11,6 +11,8 @@ describe('Phase 2 Integration Test Matrix: Authentication, Token Revocation & 6x
   const TEST_PASSWORD = 'TestPassword123!';
   let hotelId: string;
   let testFolioId: string;
+  let dedicatedReservationId: string | null = null;
+  let dedicatedFolioId: string | null = null;
   const tokens: Record<string, string> = {};
   const userRecords: Record<string, any> = {};
 
@@ -101,42 +103,43 @@ describe('Phase 2 Integration Test Matrix: Authentication, Token Revocation & 6x
     }
 
     const firstUser = await prisma.user.findFirst();
-    let reservation = await prisma.reservation.findFirst({ where: { hotelId } });
-    if (!reservation && firstUser) {
-      reservation = await prisma.reservation.create({
-        data: {
-          hotelId,
-          roomTypeId: roomType.id,
-          roomId: room.id,
-          ratePlanId: ratePlan.id,
-          confirmationNumber: 'CONF-TEST-999',
-          checkInDate: new Date('2027-01-01'),
-          checkOutDate: new Date('2027-01-05'),
-          status: 'CONFIRMED',
-          totalAmount: 400,
-          createdBy: firstUser.id,
-        },
-      });
-      await prisma.reservationGuest.create({
-        data: {
-          reservationId: reservation.id,
-          guestId: guest.id,
-          isPrimary: true,
-        },
-      });
-    }
+    const createdById = firstUser?.id || (await prisma.user.findFirst())?.id || 'system';
+    const rbacSuffix = Date.now().toString().slice(-6);
 
-    let folio = await prisma.folio.findFirst();
-    if (!folio && reservation) {
-      folio = await prisma.folio.create({
-        data: {
-          reservationId: reservation.id,
-          folioNumber: `FOL-TEST-999`,
-          status: 'OPEN',
-        },
-      });
-    }
-    testFolioId = folio ? folio.id : 'fallback-folio-id';
+    // Create a dedicated reservation specifically for RBAC matrix test
+    const rbacReservation = await prisma.reservation.create({
+      data: {
+        hotelId,
+        roomTypeId: roomType.id,
+        roomId: room.id,
+        ratePlanId: ratePlan.id,
+        confirmationNumber: `CONF-RBAC-${rbacSuffix}`,
+        checkInDate: new Date('2028-06-01'),
+        checkOutDate: new Date('2028-06-05'),
+        status: 'CONFIRMED',
+        totalAmount: 400,
+        createdBy: createdById,
+      },
+    });
+    dedicatedReservationId = rbacReservation.id;
+
+    await prisma.reservationGuest.create({
+      data: {
+        reservationId: rbacReservation.id,
+        guestId: guest.id,
+        isPrimary: true,
+      },
+    });
+
+    const rbacFolio = await prisma.folio.create({
+      data: {
+        reservationId: rbacReservation.id,
+        folioNumber: `FOL-RBAC-${rbacSuffix}`,
+        status: 'OPEN',
+      },
+    });
+    dedicatedFolioId = rbacFolio.id;
+    testFolioId = rbacFolio.id;
 
     // 3. Upsert test users for all 6 SRS roles
     const passwordHash = await bcrypt.hash(TEST_PASSWORD, 10);
@@ -181,6 +184,19 @@ describe('Phase 2 Integration Test Matrix: Authentication, Token Revocation & 6x
   }, 30000);
 
   afterAll(async () => {
+    try {
+      if (dedicatedFolioId) {
+        await prisma.folioCharge.deleteMany({ where: { folioId: dedicatedFolioId } });
+        await prisma.folio.deleteMany({ where: { id: dedicatedFolioId } });
+      }
+      if (dedicatedReservationId) {
+        await prisma.reservationGuest.deleteMany({ where: { reservationId: dedicatedReservationId } });
+        await prisma.reservation.deleteMany({ where: { id: dedicatedReservationId } });
+      }
+    } catch (err) {
+      console.warn('RBAC cleanup warning:', err);
+    }
+
     await prisma.$disconnect();
     try {
       redis.disconnect();

@@ -5,6 +5,11 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     exclude: ['**/node_modules/**', '**/dist/**', 'tests/e2e/**'],
+    fileParallelism: false,
+    poolOptions: {
+      threads: {
+        singleThread: true,
+      },
+    },
   },
 });
-
