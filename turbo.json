@@ -1,40 +1,55 @@
-{
-  "$schema": "https://turbo.build/schema.json",
-  "globalDependencies": [
-    "**/.env.*local"
-  ],
-  "tasks": {
-    "build": {
-      "dependsOn": [
-        "^build"
-      ],
-      "outputs": [
-        ".next/**",
-        "!.next/cache/**",
-        "dist/**"
-      ]
-    },
-    "lint": {
-      "dependsOn": [
-        "^lint"
-      ]
-    },
-    "type-check": {
-      "dependsOn": [
-        "^type-check"
-      ]
-    },
-    "test": {
-      "dependsOn": [
-        "^build"
-      ]
-    },
-    "dev": {
-      "cache": false,
-      "persistent": true
-    },
-    "clean": {
-      "cache": false
-    }
-  }
+﻿{
+    "$schema":  "https://turbo.build/schema.json",
+    "globalDependencies":  [
+                               "**/.env.*local"
+                           ],
+    "tasks":  {
+                  "build":  {
+                                "dependsOn":  [
+                                                  "^build"
+                                              ],
+                                "outputs":  [
+                                                ".next/**",
+                                                "!.next/cache/**",
+                                                "dist/**"
+                                            ]
+                            },
+                  "lint":  {
+                               "dependsOn":  [
+                                                 "^lint"
+                                             ]
+                           },
+                  "type-check":  {
+                                     "dependsOn":  [
+                                                       "^type-check"
+                                                   ]
+                                 },
+                  "test":  {
+                               "dependsOn":  [
+                                                 "^build"
+                                             ]
+                           },
+                  "dev":  {
+                              "cache":  false,
+                              "persistent":  true
+                          },
+                  "clean":  {
+                                "cache":  false
+                            }
+              },
+    "globalPassThroughEnv":  [
+                                 "NODE_ENV",
+                                 "PORT",
+                                 "DATABASE_URL",
+                                 "REDIS_HOST",
+                                 "REDIS_PORT",
+                                 "REDIS_URL",
+                                 "CLIENT_URL",
+                                 "NEXT_PUBLIC_API_URL",
+                                 "JWT_SECRET",
+                                 "JWT_ACCESS_SECRET",
+                                 "JWT_REFRESH_SECRET",
+                                 "JWT_ACCESS_EXPIRES_IN",
+                                 "JWT_REFRESH_EXPIRES_IN"
+                             ]
 }
