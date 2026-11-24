@@ -126,8 +126,8 @@ test.describe('Phase 3 End-to-End Browser Verification: Hotel Setup & Guest Mana
     await createRoomBtn.click();
 
     // 5. Assert Room 301 appears in the room list with AVAILABLE status
-    await expect(page.locator('text=Room 301')).toBeVisible({ timeout: 10000 });
-    const roomCard = page.locator('div:has-text("Room 301")').last();
+    const roomCard = page.locator('div.rounded-xl.p-4', { hasText: 'Room 301' }).first();
+    await expect(roomCard).toBeVisible({ timeout: 10000 });
     await expect(roomCard.locator('text=Available').first()).toBeVisible();
   });
 

@@ -19,18 +19,49 @@ export async function getRoomAvailability(
   checkOut: string,
   roomTypeId?: string
 ) {
-  const where: any = { hotelId, status: 'AVAILABLE' };
-  if (roomTypeId) where.roomTypeId = roomTypeId;
+  const checkInDate = new Date(checkIn);
+  const checkOutDate = new Date(checkOut);
 
-  where.reservations = {
-    none: {
-      status: { in: ['CONFIRMED', 'CHECKED_IN'] },
-      checkInDate: { lt: new Date(checkOut) },
-      checkOutDate: { gt: new Date(checkIn) },
+  if (isNaN(checkInDate.getTime()) || isNaN(checkOutDate.getTime())) {
+    throw new AppError(
+      'Invalid check-in or check-out date format',
+      400,
+      ErrorCode.VALIDATION_ERROR
+    );
+  }
+
+  if (checkOutDate <= checkInDate) {
+    throw new AppError(
+      'Check-out date must be after check-in date',
+      400,
+      ErrorCode.VALIDATION_ERROR
+    );
+  }
+
+  const where: any = {
+    hotelId,
+    status: {
+      notIn: ['MAINTENANCE', 'OUT_OF_SERVICE'],
     },
   };
 
-  return prisma.room.findMany({ where, include: { roomType: true } });
+  if (roomTypeId) {
+    where.roomTypeId = roomTypeId;
+  }
+
+  where.reservations = {
+    none: {
+      status: { in: ['PENDING', 'CONFIRMED', 'CHECKED_IN'] },
+      checkInDate: { lt: checkOutDate },
+      checkOutDate: { gt: checkInDate },
+    },
+  };
+
+  return prisma.room.findMany({
+    where,
+    include: { roomType: true, floor: true },
+    orderBy: [{ floor: { floorNumber: 'asc' } }, { roomNumber: 'asc' }],
+  });
 }
 
 export async function getRoomById(id: string) {

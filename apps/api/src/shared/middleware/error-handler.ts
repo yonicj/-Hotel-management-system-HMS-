@@ -56,7 +56,7 @@ export function errorHandler(
     const response: ApiErrorResponse = {
       error: {
         code: ErrorCode.ROOM_UNAVAILABLE,
-        message: 'The selected room is unavailable for the requested dates.',
+        message: 'Room is no longer available for the selected dates',
         details: anyErr?.meta ?? null,
       },
     };

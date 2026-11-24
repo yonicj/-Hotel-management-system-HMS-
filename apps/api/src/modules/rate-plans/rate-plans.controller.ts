@@ -13,7 +13,10 @@ export async function updateRatePlan(req: Request, res: Response, next: NextFunc
 }
 export async function computeRate(req: Request, res: Response, next: NextFunction) {
   try {
-    const { room_type_id, check_in, check_out } = req.query as Record<string, string>;
-    sendSuccess(res, await service.computeRate(room_type_id, check_in, check_out));
+    const q = req.query as Record<string, string>;
+    const roomTypeId = q.room_type_id || q.roomTypeId;
+    const checkIn = q.check_in || q.checkInDate || q.checkIn;
+    const checkOut = q.check_out || q.checkOutDate || q.checkOut;
+    sendSuccess(res, await service.computeRate(roomTypeId, checkIn, checkOut));
   } catch (e) { next(e); }
 }

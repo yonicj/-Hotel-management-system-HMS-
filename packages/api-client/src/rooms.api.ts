@@ -56,7 +56,14 @@ export const createRoomsApi = (client: AxiosInstance) => ({
     const res = await client.put(`/rooms/${id}/status`, { status, notes });
     return res.data?.data ?? res.data;
   },
-  getAvailability: async (params: { check_in: string; check_out: string; room_type_id?: string }): Promise<RoomItem[]> => {
+  getAvailability: async (params: {
+    checkInDate?: string;
+    checkOutDate?: string;
+    roomTypeId?: string;
+    check_in?: string;
+    check_out?: string;
+    room_type_id?: string;
+  }): Promise<RoomItem[]> => {
     const res = await client.get('/rooms/availability', { params });
     return res.data?.data ?? res.data;
   },

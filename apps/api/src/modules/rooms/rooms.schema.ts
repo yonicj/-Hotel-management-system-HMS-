@@ -13,5 +13,15 @@ export const updateRoomStatusSchema = z.object({
   notes: z.string().optional(),
 });
 
+export const roomAvailabilityQuerySchema = z.object({
+  checkInDate: z.string().optional(),
+  checkOutDate: z.string().optional(),
+  roomTypeId: z.string().uuid().optional(),
+  check_in: z.string().optional(),
+  check_out: z.string().optional(),
+  room_type_id: z.string().uuid().optional(),
+});
+
 export type CreateRoomInput = z.infer<typeof createRoomSchema>;
 export type UpdateRoomStatusInput = z.infer<typeof updateRoomStatusSchema>;
+export type RoomAvailabilityQuery = z.infer<typeof roomAvailabilityQuerySchema>;

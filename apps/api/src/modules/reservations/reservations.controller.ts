@@ -21,6 +21,15 @@ export async function createReservation(req: Request, res: Response, next: NextF
     );
   } catch (e) { next(e); }
 }
+export async function modifyReservation(req: Request, res: Response, next: NextFunction) {
+  try {
+    sendSuccess(
+      res,
+      await service.modifyReservation(req.params.id, req.body, req.user!.userId),
+      'Reservation updated'
+    );
+  } catch (e) { next(e); }
+}
 export async function confirmReservation(req: Request, res: Response, next: NextFunction) {
   try {
     sendSuccess(res, await service.confirmReservation(req.params.id, req.user!.userId), 'Reservation confirmed');

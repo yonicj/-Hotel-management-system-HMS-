@@ -45,9 +45,14 @@ export async function updateRatePlan(id: string, input: Partial<CreateRatePlanIn
   });
 }
 
-export async function computeRate(roomTypeId: string, checkIn: string, checkOut: string) {
+export async function computeRate(
+  roomTypeId: string,
+  checkIn: string,
+  checkOut: string,
+  db: any = prisma
+) {
   const nights = calculateNights(checkIn, checkOut);
-  const plan = await prisma.ratePlan.findFirst({
+  const plan = await db.ratePlan.findFirst({
     where: {
       roomTypeId,
       isActive: true,
@@ -57,7 +62,7 @@ export async function computeRate(roomTypeId: string, checkIn: string, checkOut:
     orderBy: { rate: 'asc' },
   });
 
-  const roomType = await prisma.roomType.findUnique({ where: { id: roomTypeId } });
+  const roomType = await db.roomType.findUnique({ where: { id: roomTypeId } });
   if (!roomType) throw new AppError('Room type not found', 404, ErrorCode.NOT_FOUND);
 
   const ratePerNightDecimal = new Decimal(plan ? plan.rate.toString() : roomType.baseRate.toString());
